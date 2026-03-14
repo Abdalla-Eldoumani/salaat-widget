@@ -15,18 +15,21 @@ interface PrayerTimesCompactProps {
 }
 
 function getRowClasses(prayerName: PrayerName, currentPrayer: PrayerName | null, order: PrayerName[]): {
-  bg: string;
+  card: string;
   name: string;
   time: string;
-  indicator: boolean;
 } {
   if (prayerName === currentPrayer) {
-    return { bg: 'bg-[rgba(200,168,78,0.12)]', name: 'text-[#C8A84E]', time: 'text-[#C8A84E]', indicator: true };
+    return {
+      card: 'border-l-2 border-l-[#C8A84E] bg-[rgba(200,168,78,0.08)]',
+      name: 'text-[#C8A84E] font-medium',
+      time: 'text-[#C8A84E]',
+    };
   }
   if (currentPrayer && order.indexOf(prayerName) < order.indexOf(currentPrayer)) {
-    return { bg: '', name: 'text-[#4A5568]', time: 'text-[#4A5568]', indicator: false };
+    return { card: 'border-l-2 border-l-transparent', name: 'text-[#5A6577]', time: 'text-[#5A6577]' };
   }
-  return { bg: '', name: 'text-[#7B89A1]', time: 'text-[#E8E2D6]', indicator: false };
+  return { card: 'border-l-2 border-l-transparent', name: 'text-[#8B95A8]', time: 'text-[#E8E2D6]' };
 }
 
 export default function PrayerTimesCompact({ prayerTimes, countdown, timeFormat, onDragEnd, onSettingsOpen }: PrayerTimesCompactProps) {
@@ -52,17 +55,12 @@ export default function PrayerTimesCompact({ prayerTimes, countdown, timeFormat,
           return (
             <div
               key={prayer.name}
-              className={`flex items-center justify-between px-2 py-1 rounded-md transition-all duration-400 ease-in-out ${styles.bg}`}
+              className={`flex items-center justify-between px-2 py-1 rounded-md transition-all duration-400 ease-in-out ${styles.card}`}
               aria-label={`${prayer.displayName} prayer time: ${time}`}
             >
-              <div className="flex items-center gap-1.5">
-                <span className={`w-3 text-xs ${styles.indicator ? 'text-[#C8A84E]' : 'text-transparent'}`} aria-hidden="true">
-                  {styles.indicator ? '\u25B6' : ''}
-                </span>
-                <span className={`text-xs transition-colors duration-400 ${styles.name}`}>
-                  {prayer.displayName}
-                </span>
-              </div>
+              <span className={`text-xs transition-colors duration-400 ${styles.name}`}>
+                {prayer.displayName}
+              </span>
               <span className={`text-sm font-medium tabular-nums transition-colors duration-400 ${styles.time}`}>
                 {time}
               </span>
