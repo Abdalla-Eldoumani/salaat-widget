@@ -80,7 +80,7 @@ Audio is played through Rust's rodio crate, not the browser. This means it keeps
 | Setting | Type | Default | What it does |
 |---------|------|---------|--------------|
 | `timeFormat` | string | `12h` | `12h` for AM/PM, `24h` for military time. |
-| `showCountdown` | boolean | `true` | Show the "Next: Maghrib in 2h 15m" countdown. |
+| `showCountdown` | boolean | `true` | Show the "Next · Maghrib in 2h 15m" countdown. |
 | `theme` | string | `dark` | Only dark is implemented. Reserved for future light/system themes. |
 
 ## System
