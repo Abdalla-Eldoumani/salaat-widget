@@ -1,6 +1,21 @@
 # Adhan Audio Files
 
-Place MP3 adhan recordings here. They get bundled into the app at build time.
+Bundled adhan recordings. These get packaged into the app at build time via `tauri.conf.json` resource mapping.
+
+## Included reciters
+
+| File | Reciter |
+|------|---------|
+| `adhan-makkah.mp3` | Makkah |
+| `adhan-madinah.mp3` | Madinah |
+| `adhan-alaqsa.mp3` | Al-Aqsa |
+| `adhan-abdul-basit.mp3` | Abdul Basit |
+| `adhan-minshawi.mp3` | Minshawi |
+| `adhan-egypt.mp3` | Egypt |
+
+## Source
+
+Recordings from [praytimes.org](https://praytimes.org/). These are widely-distributed adhan recordings shared for Islamic educational and devotional use.
 
 ## File naming
 
@@ -8,15 +23,7 @@ Place MP3 adhan recordings here. They get bundled into the app at build time.
 adhan-{identifier}.mp3
 ```
 
-Examples: `adhan-makkah.mp3`, `adhan-madinah.mp3`
-
-## Sourcing
-
-Every recording needs a clear license. Public domain, Creative Commons, or explicit written permission from the copyright holder.
-
-Do not include recordings ripped from apps, YouTube, or streaming services.
-
-For development, any short MP3 renamed to `adhan-makkah.mp3` works as a placeholder.
+To add a new reciter, place the MP3 here and add a matching entry to `RECITERS` in `src/lib/constants.ts`.
 
 ## Format
 
