@@ -11,12 +11,13 @@ interface UsePrayerTimesOptions {
   madhab: MadhabName;
   highLatitudeRule?: HighLatitudeRuleName;
   adhanEnabled: boolean;
+  adhanReciter: string;
   mutedPrayers: PrayerName[];
   notificationsEnabled: boolean;
 }
 
 export function usePrayerTimes(options: UsePrayerTimesOptions): PrayerTimeResult {
-  const { latitude, longitude, method, madhab, highLatitudeRule, adhanEnabled, mutedPrayers, notificationsEnabled } = options;
+  const { latitude, longitude, method, madhab, highLatitudeRule, adhanEnabled, adhanReciter, mutedPrayers, notificationsEnabled } = options;
 
   // Track the current date (year/month/day) so we recalculate at midnight
   const [today, setToday] = useState(() => new Date());
@@ -69,9 +70,10 @@ export function usePrayerTimes(options: UsePrayerTimesOptions): PrayerTimeResult
       time: p.time.toISOString(),
       hasAdhan: adhanEnabled && p.hasAdhan && !mutedPrayers.includes(p.name),
       sendNotification: notificationsEnabled,
+      reciter: adhanReciter,
     }));
     invoke('set_prayer_times', { times: entries }).catch(() => {});
-  }, [result, adhanEnabled, mutedPrayers, notificationsEnabled]);
+  }, [result, adhanEnabled, adhanReciter, mutedPrayers, notificationsEnabled]);
 
   return result;
 }
