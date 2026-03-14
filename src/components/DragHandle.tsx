@@ -14,21 +14,16 @@ export default function DragHandle({ orientation, onDragEnd }: DragHandleProps) 
   };
 
   const isHorizontal = orientation === 'horizontal';
-  const diamonds = [0, 1, 2];
 
   return (
     <div
-      className={`flex ${isHorizontal ? 'flex-row' : 'flex-col'} items-center gap-1 cursor-grab active:cursor-grabbing p-1.5`}
+      className={`flex ${isHorizontal ? 'flex-row gap-1.5' : 'flex-col gap-1.5'} items-center cursor-grab active:cursor-grabbing p-1.5`}
       onMouseDown={handleMouseDown}
       role="separator"
       aria-label="Drag to move widget"
     >
-      {diamonds.map((i) => (
-        <div
-          key={i}
-          className="w-[5px] h-[5px] rotate-45 bg-[#8B7235] opacity-60"
-        />
-      ))}
+      <div className={`${isHorizontal ? 'w-[4px] h-px' : 'w-px h-[4px]'} bg-[#7B89A1] opacity-40 rounded-full`} />
+      <div className={`${isHorizontal ? 'w-[4px] h-px' : 'w-px h-[4px]'} bg-[#7B89A1] opacity-40 rounded-full`} />
     </div>
   );
 }
