@@ -15,10 +15,18 @@ interface PrayerTimesSidebarProps {
   onSettingsOpen: () => void;
 }
 
-function getTextClass(prayerName: PrayerName, currentPrayer: PrayerName | null, order: PrayerName[]): string {
-  if (prayerName === currentPrayer) return 'text-[#C8A84E]';
-  if (currentPrayer && order.indexOf(prayerName) < order.indexOf(currentPrayer)) return 'text-[#4A5568]';
-  return 'text-[#E8E2D6]';
+function getState(prayerName: PrayerName, currentPrayer: PrayerName | null, order: PrayerName[]): 'current' | 'passed' | 'upcoming' {
+  if (prayerName === currentPrayer) return 'current';
+  if (currentPrayer && order.indexOf(prayerName) < order.indexOf(currentPrayer)) return 'passed';
+  return 'upcoming';
+}
+
+function getTextClass(state: 'current' | 'passed' | 'upcoming'): { name: string; time: string } {
+  switch (state) {
+    case 'current': return { name: 'text-[#C8A84E] font-medium', time: 'text-[#C8A84E]' };
+    case 'passed': return { name: 'text-[#5A6577]', time: 'text-[#5A6577]' };
+    default: return { name: 'text-[#8B95A8]', time: 'text-[#E8E2D6]' };
+  }
 }
 
 export default function PrayerTimesSidebar({ prayerTimes, countdown, timeFormat, onDragEnd, onSettingsOpen }: PrayerTimesSidebarProps) {
@@ -30,23 +38,25 @@ export default function PrayerTimesSidebar({ prayerTimes, countdown, timeFormat,
     <div className="h-full w-full flex flex-col items-center py-2 gap-1">
       <DragHandle orientation="horizontal" onDragEnd={onDragEnd} />
 
-      <div className="flex flex-col items-center gap-0 flex-1 w-full px-2">
+      <div className="flex flex-col gap-0 flex-1 w-full px-3">
         {prayers.map((prayer, i) => {
-          const textClass = getTextClass(prayer.name, currentPrayer, order);
+          const state = getState(prayer.name, currentPrayer, order);
+          const styles = getTextClass(state);
           const time = isInvalidTime(prayer.time) ? '--:--' : formatPrayerTime(prayer.time, timeFormat);
-          const isActive = prayer.name === currentPrayer;
+          const isActive = state === 'current';
 
           return (
             <div key={prayer.name} className="w-full">
               {i > 0 && <ArabesqueDivider orientation="horizontal" />}
               <div
-                className={`flex flex-col items-center px-2 py-1 rounded-md transition-colors duration-400 ${isActive ? 'bg-[rgba(200,168,78,0.12)]' : ''}`}
+                className={`flex items-center justify-between px-2 py-1.5 rounded-md transition-colors duration-400
+                  ${isActive ? 'border-l-2 border-l-[#C8A84E] bg-[rgba(200,168,78,0.08)]' : 'border-l-2 border-l-transparent'}`}
                 aria-label={`${prayer.displayName} prayer time: ${time}`}
               >
-                <span className={`text-[10px] ${isActive ? 'text-[#C8A84E]' : 'text-[#7B89A1]'}`}>
+                <span className={`text-xs transition-colors duration-400 ${styles.name}`}>
                   {prayer.displayName}
                 </span>
-                <span className={`text-sm font-medium tabular-nums ${textClass}`}>
+                <span className={`text-sm font-medium tabular-nums transition-colors duration-400 ${styles.time}`}>
                   {time}
                 </span>
               </div>
