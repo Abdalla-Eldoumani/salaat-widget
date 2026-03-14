@@ -6,7 +6,7 @@ use crate::tray::update_tray_icon;
 #[tauri::command]
 pub fn play_adhan(app: AppHandle, state: State<'_, AppState>, reciter: String) -> Result<(), String> {
     let resource_dir = app.path().resource_dir().map_err(|e| e.to_string())?;
-    let path = resource_dir.join(format!("audio/{reciter}.wav"));
+    let path = resource_dir.join(format!("audio/{reciter}.mp3"));
 
     if !path.exists() {
         return Err(format!("audio file not found: {}", path.display()));
