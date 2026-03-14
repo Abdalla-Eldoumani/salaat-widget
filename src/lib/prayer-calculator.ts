@@ -96,12 +96,13 @@ function makePrayerTime(name: PrayerName, time: Date): PrayerTime {
 }
 
 // Converts PrayerTimeResult into the serializable format the Rust backend expects.
-export function toSchedulerEntries(result: PrayerTimeResult, notificationsEnabled = true): PrayerTimeEntry[] {
+export function toSchedulerEntries(result: PrayerTimeResult, notificationsEnabled = true, reciter = 'adhan-makkah'): PrayerTimeEntry[] {
   return result.prayers.map((p) => ({
     name: p.name,
     time: p.time.toISOString(),
     hasAdhan: p.hasAdhan,
     sendNotification: notificationsEnabled,
+    reciter,
   }));
 }
 
