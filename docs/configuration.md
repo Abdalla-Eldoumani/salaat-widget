@@ -55,8 +55,21 @@ This setting only appears during onboarding if your latitude is above 48°. You 
 |---------|------|---------|--------------|
 | `notificationsEnabled` | boolean | `true` | Show a native OS notification when each prayer time arrives. |
 | `adhanEnabled` | boolean | `true` | Play the adhan audio at prayer times. |
-| `adhanReciter` | string | `adhan-makkah.mp3` | Which audio file to use. Currently only one is bundled. |
+| `adhanReciter` | string | `adhan-makkah` | Which reciter to use. See table below. |
 | `mutedPrayers` | string[] | `[]` | List of prayer names to skip adhan for. e.g. `["sunrise", "dhuhr"]`. |
+
+### Available reciters
+
+| Key | Name |
+|-----|------|
+| `adhan-makkah` | Makkah |
+| `adhan-madinah` | Madinah |
+| `adhan-alaqsa` | Al-Aqsa |
+| `adhan-abdul-basit` | Abdul Basit |
+| `adhan-minshawi` | Minshawi |
+| `adhan-egypt` | Egypt |
+
+The reciter dropdown only appears when adhan audio is enabled.
 
 Muting is separate from the global mute button. The mute button (speaker icon on the widget, or "Mute" in the tray menu) silences all audio immediately. The `mutedPrayers` setting lets you silence specific prayers permanently.
 
