@@ -13,7 +13,7 @@ export const DEFAULT_SETTINGS: SalaatSettings = {
 
   notificationsEnabled: true,
   adhanEnabled: true,
-  adhanReciter: 'adhan-makkah.mp3',
+  adhanReciter: 'adhan-makkah',
   mutedPrayers: [],
 
   dockEdge: 'top',
@@ -126,6 +126,16 @@ export const PRAYER_NAMES: Record<PrayerName, {
   asr:     { english: 'Asr',     arabic: 'العصر',    hasAdhan: true },
   maghrib: { english: 'Maghrib', arabic: 'المغرب',   hasAdhan: true },
   isha:    { english: 'Isha',    arabic: 'العشاء',   hasAdhan: true },
+};
+
+// Available adhan reciters. Keys match filenames in src-tauri/resources/audio/ (without extension).
+export const RECITERS: Record<string, string> = {
+  'adhan-makkah': 'Makkah',
+  'adhan-madinah': 'Madinah',
+  'adhan-alaqsa': 'Al-Aqsa',
+  'adhan-abdul-basit': 'Abdul Basit',
+  'adhan-minshawi': 'Minshawi',
+  'adhan-egypt': 'Egypt',
 };
 
 // Logical pixel dimensions for each layout mode.
