@@ -40,8 +40,8 @@ src/
 │   ├── PrayerTimesSidebar.tsx  Vertical layout (left/right edge)
 │   ├── PrayerTimesCompact.tsx  Floating compact layout
 │   ├── PrayerCard.tsx       Single prayer time display
-│   ├── CountdownTimer.tsx   "Next: Maghrib in 2h 15m"
-│   ├── DragHandle.tsx       Diamond grip for window dragging
+│   ├── CountdownTimer.tsx   "Next · Maghrib in 2h 15m"
+│   ├── DragHandle.tsx       Grip lines for window dragging
 │   ├── SettingsPanel.tsx    Full settings UI (400x520 overlay)
 │   ├── Onboarding.tsx       Three-step first-launch flow
 │   ├── MuteButton.tsx       Speaker icon, toggles backend mute
@@ -64,10 +64,10 @@ The widget has three visual layouts, picked by dock position:
 | Dock edge | Layout | Size | Component |
 |-----------|--------|------|-----------|
 | top, bottom | horizontal | 720x72 | PrayerTimesBar |
-| left, right | vertical | 110x440 | PrayerTimesSidebar |
+| left, right | vertical | 140x440 | PrayerTimesSidebar |
 | floating | compact | 240x280 | PrayerTimesCompact |
 
-`useWindowDock` detects which edge the window is near after a drag ends, then snaps it into position and switches the layout. The threshold is 40 logical pixels.
+`useWindowDock` detects which edge the window is near after a drag ends, then snaps it into position and switches the layout. The threshold is 40 logical pixels. Window resizing is deferred to a `useEffect` so React re-renders the correct layout component before the window changes size (prevents a flash of the wrong layout during transitions).
 
 ### Prayer time flow
 
