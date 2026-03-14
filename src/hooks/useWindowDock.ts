@@ -36,10 +36,36 @@ async function getWindowBounds(appWindow: Window, scale: number): Promise<Window
   };
 }
 
+interface PendingResize {
+  width: number;
+  height: number;
+  x: number;
+  y: number;
+}
+
 export function useWindowDock(enabled: boolean = true, defaultEdge: DockEdge = DEFAULT_SETTINGS.dockEdge): UseWindowDockResult {
   const [dockEdge, setDockEdge] = useState<DockEdge>(defaultEdge);
   const [layout, setLayout] = useState<WidgetLayout>(getLayoutForEdge(defaultEdge));
   const snapping = useRef(false);
+  const pendingResize = useRef<PendingResize | null>(null);
+  const initDone = useRef(false);
+
+  // Apply window resize AFTER React has re-rendered with the new layout
+  useEffect(() => {
+    const resize = pendingResize.current;
+    if (!resize) return;
+    pendingResize.current = null;
+
+    const appWindow = Window.getCurrent();
+    (async () => {
+      await appWindow.setSize(new LogicalSize(resize.width, resize.height));
+      await appWindow.setPosition(new LogicalPosition(resize.x, resize.y));
+      if (!initDone.current) {
+        initDone.current = true;
+        await appWindow.show();
+      }
+    })().catch(() => {});
+  }, [dockEdge, layout]);
 
   const checkSnap = useCallback(async () => {
     if (snapping.current) return;
@@ -54,15 +80,17 @@ export function useWindowDock(enabled: boolean = true, defaultEdge: DockEdge = D
       const snap = calculateSnap(windowBounds, monitorBounds);
 
       if (snap) {
+        pendingResize.current = { ...snap.size, ...snap.position };
         setDockEdge(snap.edge);
         setLayout(snap.layout);
-        await appWindow.setSize(new LogicalSize(snap.size.width, snap.size.height));
-        await appWindow.setPosition(new LogicalPosition(snap.position.x, snap.position.y));
       } else {
+        const compactSize = getDimensionsForLayout('compact');
+        // Keep current position for floating
+        const pos = await appWindow.outerPosition();
+        const scale = monitorBounds.scaleFactor;
+        pendingResize.current = { ...compactSize, x: pos.x / scale, y: pos.y / scale };
         setDockEdge('floating');
         setLayout('compact');
-        const compactSize = getDimensionsForLayout('compact');
-        await appWindow.setSize(new LogicalSize(compactSize.width, compactSize.height));
       }
     } finally {
       setTimeout(() => { snapping.current = false; }, 300);
@@ -99,23 +127,19 @@ export function useWindowDock(enabled: boolean = true, defaultEdge: DockEdge = D
       const snap = onScreen ? calculateSnap(windowBounds, monitorBounds) : null;
 
       if (snap) {
+        pendingResize.current = { ...snap.size, ...snap.position };
         setDockEdge(snap.edge);
         setLayout(snap.layout);
-        await appWindow.setSize(new LogicalSize(snap.size.width, snap.size.height));
-        await appWindow.setPosition(new LogicalPosition(snap.position.x, snap.position.y));
       } else {
         // First launch or off-screen — use saved/default dock position
         const edgeLayout = getLayoutForEdge(defaultEdge);
         const size = getDimensionsForLayout(edgeLayout);
         const pos = getSnapPosition(defaultEdge, size, monitorBounds);
 
+        pendingResize.current = { ...size, ...pos };
         setDockEdge(defaultEdge);
         setLayout(edgeLayout);
-        await appWindow.setSize(new LogicalSize(size.width, size.height));
-        await appWindow.setPosition(new LogicalPosition(pos.x, pos.y));
       }
-
-      await appWindow.show();
     }
 
     init().catch(() => {});
