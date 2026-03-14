@@ -10,7 +10,7 @@ import type {
   PrayerName,
   LocationResult,
 } from '../types';
-import { CALCULATION_METHODS, PRAYER_NAMES } from '../lib/constants';
+import { CALCULATION_METHODS, PRAYER_NAMES, RECITERS } from '../lib/constants';
 import { CITIES } from '../lib/cities';
 
 const SETTINGS_SIZE = { width: 400, height: 520 };
@@ -134,6 +134,17 @@ export default function SettingsPanel({
             checked={settings.adhanEnabled}
             onChange={(v) => onUpdate('adhanEnabled', v)}
           />
+          {settings.adhanEnabled && (
+            <Select
+              label="Reciter"
+              value={settings.adhanReciter}
+              options={Object.entries(RECITERS).map(([key, name]) => ({
+                value: key,
+                label: name,
+              }))}
+              onChange={(v) => onUpdate('adhanReciter', v)}
+            />
+          )}
           <div className="space-y-1">
             <span className="text-[10px] text-[#7B89A1]">Mute individual prayers:</span>
             <div className="flex flex-wrap gap-2">
