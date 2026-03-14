@@ -1,0 +1,10 @@
+node_modules/
+dist/
+target/
+src-tauri/gen/
+
+# pnpm artifacts
+salaat-widget@*
+
+# stray tauri cli file
+tauri
