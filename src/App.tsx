@@ -30,6 +30,7 @@ function App() {
     madhab: settings.madhab,
     highLatitudeRule: settings.highLatitudeRule,
     adhanEnabled: settings.adhanEnabled,
+    adhanReciter: settings.adhanReciter,
     mutedPrayers: settings.mutedPrayers,
     notificationsEnabled: settings.notificationsEnabled,
   });
