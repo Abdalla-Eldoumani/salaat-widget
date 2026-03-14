@@ -84,7 +84,10 @@ The tray icons (`tray-default.png`, `tray-playing.png`, `tray-muted.png`) are se
 
 ## CI / CD
 
-The project includes a GitHub Actions workflow (`.github/workflows/ci.yml`) that builds for Windows, macOS, and Linux on every push. Built artifacts are uploaded and can be downloaded from the Actions tab.
+The project has two GitHub Actions workflows:
+
+- **CI** (`.github/workflows/ci.yml`) — runs on every push to `main` and on PRs. Typechecks and builds for all three platforms. Artifacts are uploaded and can be downloaded from the Actions tab.
+- **Release** (`.github/workflows/release.yml`) — runs when you push a version tag (e.g. `git tag v0.1.0 && git push origin v0.1.0`). Builds for all platforms and creates a draft GitHub Release with installers attached. Review the draft and publish it when ready.
 
 ## Troubleshooting
 
