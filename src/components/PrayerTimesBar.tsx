@@ -23,33 +23,32 @@ export default function PrayerTimesBar({ prayerTimes, countdown, timeFormat, onD
     <div className="h-full w-full flex items-center px-2 gap-1">
       <DragHandle orientation="vertical" onDragEnd={onDragEnd} />
 
-      <div className="flex flex-col items-center justify-center gap-1 flex-1">
-        <div className="flex items-center gap-0">
-          {prayers.map((prayer, i) => {
-            let state: 'upcoming' | 'current' | 'passed' = 'upcoming';
-            if (prayer.name === currentPrayer) {
-              state = 'current';
-            } else if (currentPrayer && isPassed(prayer.name, currentPrayer, prayers.map((p) => p.name))) {
-              state = 'passed';
-            }
+      <div className="flex items-center gap-0 flex-1">
+        {prayers.map((prayer, i) => {
+          let state: 'upcoming' | 'current' | 'passed' = 'upcoming';
+          if (prayer.name === currentPrayer) {
+            state = 'current';
+          } else if (currentPrayer && isPassed(prayer.name, currentPrayer, prayers.map((p) => p.name))) {
+            state = 'passed';
+          }
 
-            return (
-              <div key={prayer.name} className="flex items-center">
-                {i > 0 && <ArabesqueDivider orientation="vertical" />}
-                <PrayerCard
-                  displayName={prayer.displayName}
-                  time={prayer.time}
-                  state={state}
-                  timeFormat={timeFormat}
-                />
-              </div>
-            );
-          })}
-        </div>
-        <CountdownTimer nextPrayerName={nextPrayerDisplay} countdown={countdown} />
+          return (
+            <div key={prayer.name} className="flex items-center">
+              {i > 0 && <ArabesqueDivider orientation="vertical" />}
+              <PrayerCard
+                displayName={prayer.displayName}
+                time={prayer.time}
+                state={state}
+                timeFormat={timeFormat}
+              />
+            </div>
+          );
+        })}
       </div>
 
-      <div className="flex flex-col gap-1">
+      <CountdownTimer nextPrayerName={nextPrayerDisplay} countdown={countdown} />
+
+      <div className="flex items-center gap-1">
         <MuteButton />
         <SettingsButton onClick={onSettingsOpen} />
       </div>
