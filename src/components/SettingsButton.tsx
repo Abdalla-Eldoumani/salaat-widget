@@ -14,7 +14,7 @@ export default function SettingsButton({ onClick, className = '' }: SettingsButt
     >
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
         <circle cx="12" cy="12" r="3" />
-        <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+        <path d="M12 1l1.09 2.41a7 7 0 0 1 2.18.9l2.55-.77.9 1.56-1.46 2.18a7 7 0 0 1 0 2.38l1.46 2.18-.9 1.56-2.55-.77a7 7 0 0 1-2.18.9L12 23l-1.09-2.41a7 7 0 0 1-2.18-.9l-2.55.77-.9-1.56 1.46-2.18a7 7 0 0 1 0-2.38L5.28 12.16l.9-1.56 2.55.77a7 7 0 0 1 2.18-.9L12 1z" />
       </svg>
     </button>
   );
