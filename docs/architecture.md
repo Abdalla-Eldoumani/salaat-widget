@@ -147,8 +147,10 @@ Add an entry to the `CITIES` array in `src/lib/cities.ts`:
 
 ## Adding an adhan recording
 
-1. Place the audio file (WAV format) in `src-tauri/resources/audio/`
-2. The scheduler currently hardcodes `audio/adhan-makkah.wav` — to add reciter selection, update `scheduler.rs` to read the reciter name from the prayer time entries or a separate setting
+1. Place the MP3 file in `src-tauri/resources/audio/` named `adhan-{identifier}.mp3`
+2. Add a matching entry to `RECITERS` in `src/lib/constants.ts`
+
+The frontend sends the reciter key (e.g. `adhan-makkah`) through `PrayerTimeEntry.reciter`. The scheduler in `scheduler.rs` constructs the path `audio/{reciter}.mp3` at playback time.
 
 ## Platform notes
 
