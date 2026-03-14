@@ -141,7 +141,7 @@ export const RECITERS: Record<string, string> = {
 // Logical pixel dimensions for each layout mode.
 export const WIDGET_DIMENSIONS = {
   horizontal: { width: 720, height: 72 },
-  vertical:   { width: 110, height: 440 },
+  vertical:   { width: 140, height: 440 },
   compact:    { width: 240, height: 280 },
 } as const;
 
