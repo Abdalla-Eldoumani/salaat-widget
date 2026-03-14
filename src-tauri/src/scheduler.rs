@@ -13,6 +13,7 @@ pub struct PrayerTimeEntry {
     pub time: String,
     pub has_adhan: bool,
     pub send_notification: bool,
+    pub reciter: String,
 }
 
 pub struct SchedulerState {
@@ -60,7 +61,7 @@ fn check_prayer_times(app: &AppHandle) {
                 if scheduler.last_triggered.as_deref() == Some(&entry.name) {
                     continue;
                 }
-                found = Some((entry.name.clone(), entry.time.clone(), entry.has_adhan, entry.send_notification));
+                found = Some((entry.name.clone(), entry.time.clone(), entry.has_adhan, entry.send_notification, entry.reciter.clone()));
                 break;
             }
         }
@@ -68,7 +69,7 @@ fn check_prayer_times(app: &AppHandle) {
         found
     };
 
-    let (name, time_str, has_adhan, send_notification) = match triggered {
+    let (name, time_str, has_adhan, send_notification, reciter) = match triggered {
         Some(t) => t,
         None => return,
     };
@@ -115,7 +116,7 @@ fn check_prayer_times(app: &AppHandle) {
         let audio = state.audio.lock().unwrap();
         if let Some(handle) = audio.as_ref() {
             if let Ok(resource_dir) = app.path().resource_dir() {
-                let path = resource_dir.join("audio/adhan-makkah.wav");
+                let path = resource_dir.join(format!("audio/{reciter}.mp3"));
                 if handle.play(&path).is_ok() {
                     // Show "playing" tray icon during adhan
                     *state.tray_state.lock().unwrap() = TrayState::Playing;
