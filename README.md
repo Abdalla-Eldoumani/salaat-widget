@@ -50,7 +50,7 @@ On first launch, you'll see a three-step setup:
 2. **Calculation method** — auto-suggested based on your country, plus madhab and high-latitude options
 3. **Widget placement** — choose which screen edge to dock to
 
-After setup, the widget snaps to your chosen edge and starts showing prayer times. Drag the diamond grip to move it to a different edge. Right-click the tray icon or press `Ctrl+Shift+P` to show/hide the widget.
+After setup, the widget snaps to your chosen edge and starts showing prayer times. Drag the grip to move it to a different edge. Right-click the tray icon or press `Ctrl+Shift+P` to show/hide the widget.
 
 ## Settings
 
