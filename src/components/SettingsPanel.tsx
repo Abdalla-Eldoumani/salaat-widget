@@ -247,7 +247,7 @@ function Toggle({ label, checked, onChange }: { label: string; checked: boolean;
       >
         <span
           className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform
-            ${checked ? 'translate-x-4' : 'translate-x-0.5'}`}
+            ${checked ? 'translate-x-[18px]' : 'translate-x-0.5'}`}
         />
       </button>
     </label>
@@ -346,7 +346,7 @@ function AutostartToggle({ checked, onChange }: { checked: boolean; onChange: (v
       >
         <span
           className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform
-            ${checked ? 'translate-x-4' : 'translate-x-0.5'}`}
+            ${checked ? 'translate-x-[18px]' : 'translate-x-0.5'}`}
         />
       </button>
     </label>
@@ -377,7 +377,7 @@ function AlwaysOnTopToggle({ checked, onChange }: { checked: boolean; onChange: 
       >
         <span
           className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform
-            ${checked ? 'translate-x-4' : 'translate-x-0.5'}`}
+            ${checked ? 'translate-x-[18px]' : 'translate-x-0.5'}`}
         />
       </button>
     </label>
