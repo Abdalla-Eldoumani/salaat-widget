@@ -114,7 +114,7 @@ function App() {
   }
 
   return (
-    <div className="h-full w-full bg-[rgba(15,23,42,0.85)] backdrop-blur-xl border border-[rgba(200,168,78,0.10)] rounded-[10px] khatam-pattern">
+    <div className="h-full w-full bg-[rgba(15,23,42,0.88)] backdrop-blur-xl border border-[rgba(200,168,78,0.06)] rounded-lg shadow-[0_2px_12px_rgba(0,0,0,0.3)] khatam-pattern">
       {layout === 'horizontal' && (
         <PrayerTimesBar
           prayerTimes={prayerTimes}
