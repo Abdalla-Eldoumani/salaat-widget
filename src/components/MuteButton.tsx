@@ -18,7 +18,7 @@ export default function MuteButton({ className = '' }: MuteButtonProps) {
       await invoke('set_mute', { muted: next });
       setMuted(next);
     } catch {
-      // ignore — state stays as-is
+      // ignore - state stays as-is
     }
   }
 

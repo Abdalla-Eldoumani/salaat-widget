@@ -131,7 +131,7 @@ export function useWindowDock(enabled: boolean = true, defaultEdge: DockEdge = D
         setDockEdge(snap.edge);
         setLayout(snap.layout);
       } else {
-        // First launch or off-screen — use saved/default dock position
+        // First launch or off-screen - use saved/default dock position
         const edgeLayout = getLayoutForEdge(defaultEdge);
         const size = getDimensionsForLayout(edgeLayout);
         const pos = getSnapPosition(defaultEdge, size, monitorBounds);

@@ -98,7 +98,7 @@ export interface PrayerTimeEntry {
   time: string;
   hasAdhan: boolean;
   sendNotification: boolean;
-  // Reciter key (e.g. "adhan-makkah") — maps to audio file in resources
+  // Reciter key (e.g. "adhan-makkah") - maps to audio file in resources
   reciter: string;
 }
 

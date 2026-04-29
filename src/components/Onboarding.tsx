@@ -38,7 +38,7 @@ export default function Onboarding({
   const [manualMode, setManualMode] = useState(false);
   const [selectedCity, setSelectedCity] = useState(settings.locationName);
 
-  // Step 2 state — auto-suggest method from detected country
+  // Step 2 state - auto-suggest method from detected country
   const suggestedMethod = geoLocation.countryCode
     ? COUNTRY_TO_METHOD[geoLocation.countryCode] ?? settings.calculationMethod
     : settings.calculationMethod;
@@ -324,7 +324,7 @@ function MethodStep({
           >
             {Object.entries(CALCULATION_METHODS).map(([key, info]) => (
               <option key={key} value={key}>
-                {info.displayName} — {info.region}
+                {info.displayName} - {info.region}
               </option>
             ))}
           </select>

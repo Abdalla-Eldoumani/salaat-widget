@@ -24,7 +24,7 @@ impl AudioHandle {
         thread::spawn(move || {
             let (_stream, stream_handle) = match OutputStream::try_default() {
                 Ok(s) => s,
-                Err(_) => return, // no audio device — thread exits silently
+                Err(_) => return, // no audio device - thread exits silently
             };
 
             let mut sink: Option<Sink> = None;

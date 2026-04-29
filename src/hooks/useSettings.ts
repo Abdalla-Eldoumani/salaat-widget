@@ -12,7 +12,7 @@ interface UseSettingsResult {
 
 const STORE_PATH = 'settings.json';
 
-// Singleton store instance — shared across hook calls
+// Singleton store instance - shared across hook calls
 let storeInstance: LazyStore | null = null;
 
 function getStore(): LazyStore {

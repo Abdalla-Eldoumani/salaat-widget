@@ -53,7 +53,7 @@ pub fn run() {
             Ok(())
         })
         .on_window_event(|window, event| {
-            // Hide instead of close — the app lives in the tray
+            // Hide instead of close - the app lives in the tray
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();
                 let _ = window.hide();

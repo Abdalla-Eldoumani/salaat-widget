@@ -70,8 +70,8 @@ pub fn update_tray_icon(app: &AppHandle, state: TrayState) {
 
         let tooltip = match state {
             TrayState::Default => "Salaat Widget",
-            TrayState::Playing => "Salaat Widget — Adhan playing",
-            TrayState::Muted => "Salaat Widget — Muted",
+            TrayState::Playing => "Salaat Widget - Adhan playing",
+            TrayState::Muted => "Salaat Widget - Muted",
         };
         let _ = tray.set_tooltip(Some(tooltip));
     }
