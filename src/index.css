@@ -25,3 +25,7 @@ html, body, #root {
 .animate-prayer-pulse {
   animation: prayer-pulse 600ms ease-in-out;
 }
+
+.font-arabic {
+  font-family: 'Amiri', 'Scheherazade New', serif;
+}
