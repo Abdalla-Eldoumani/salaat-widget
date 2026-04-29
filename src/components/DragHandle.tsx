@@ -8,9 +8,18 @@ interface DragHandleProps {
 export default function DragHandle({ orientation, onDragEnd }: DragHandleProps) {
   const handleMouseDown = async (e: React.MouseEvent) => {
     e.preventDefault();
+    // On Windows, startDragging() resolves at drag-start, so awaiting it and then
+    // calling onDragEnd snaps against the starting position. Wait for real mouseup
+    // before firing the snap check.
+    const onUp = () => {
+      window.removeEventListener('mouseup', onUp);
+      window.removeEventListener('pointerup', onUp);
+      onDragEnd?.();
+    };
+    window.addEventListener('mouseup', onUp);
+    window.addEventListener('pointerup', onUp);
     const appWindow = Window.getCurrent();
     await appWindow.startDragging();
-    onDragEnd?.();
   };
 
   const isHorizontal = orientation === 'horizontal';
