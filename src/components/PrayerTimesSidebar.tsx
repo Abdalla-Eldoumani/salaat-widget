@@ -21,11 +21,11 @@ function getState(prayerName: PrayerName, currentPrayer: PrayerName | null, orde
   return 'upcoming';
 }
 
-function getTextClass(state: 'current' | 'passed' | 'upcoming'): { name: string; time: string } {
+function getTextClass(state: 'current' | 'passed' | 'upcoming'): { name: string; arabic: string; time: string } {
   switch (state) {
-    case 'current': return { name: 'text-[#C8A84E] font-medium', time: 'text-[#C8A84E]' };
-    case 'passed': return { name: 'text-[#5A6577]', time: 'text-[#5A6577]' };
-    default: return { name: 'text-[#8B95A8]', time: 'text-[#E8E2D6]' };
+    case 'current': return { name: 'text-[#C8A84E] font-medium', arabic: 'text-[#C8A84E]/70', time: 'text-[#C8A84E]' };
+    case 'passed': return { name: 'text-[#5A6577]', arabic: 'text-[#5A6577]/70', time: 'text-[#5A6577]' };
+    default: return { name: 'text-[#8B95A8]', arabic: 'text-[#8B95A8]/60', time: 'text-[#E8E2D6]' };
   }
 }
 
@@ -49,13 +49,18 @@ export default function PrayerTimesSidebar({ prayerTimes, countdown, timeFormat,
             <div key={prayer.name} className="w-full">
               {i > 0 && <ArabesqueDivider orientation="horizontal" />}
               <div
-                className={`flex items-center justify-between px-2 py-1.5 rounded-md transition-colors duration-400
+                className={`flex items-center justify-between px-2 py-1 rounded-md transition-colors duration-400
                   ${isActive ? 'border-l-2 border-l-[#C8A84E] bg-[rgba(200,168,78,0.08)]' : 'border-l-2 border-l-transparent'}`}
                 aria-label={`${prayer.displayName} prayer time: ${time}`}
               >
-                <span className={`text-xs transition-colors duration-400 ${styles.name}`}>
-                  {prayer.displayName}
-                </span>
+                <div className="flex flex-col leading-tight">
+                  <span className={`text-xs transition-colors duration-400 ${styles.name}`}>
+                    {prayer.displayName}
+                  </span>
+                  <span className={`text-[11px] font-arabic transition-colors duration-400 ${styles.arabic}`}>
+                    {prayer.arabicName}
+                  </span>
+                </div>
                 <span className={`text-sm font-medium tabular-nums transition-colors duration-400 ${styles.time}`}>
                   {time}
                 </span>
