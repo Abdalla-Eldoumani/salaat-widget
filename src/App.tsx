@@ -18,6 +18,7 @@ function App() {
   const { layout, onDragEnd } = useWindowDock(settings.onboardingComplete, settings.dockEdge);
   const geo = useGeolocation(settings.autoDetectLocation);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [flashing, setFlashing] = useState(false);
 
   // Use detected location if auto-detect is on, otherwise use stored settings
   const latitude = settings.autoDetectLocation ? geo.location.latitude : settings.latitude;
@@ -55,17 +56,26 @@ function App() {
     }
   }, [loading, settings.alwaysOnTop]);
 
-  // Show the widget when a prayer time arrives
+  // Show the widget and flash when a prayer time arrives
   useEffect(() => {
     const unlisten = listen<PrayerTimeEventPayload>('prayer-time', () => {
       const appWindow = Window.getCurrent();
       appWindow.show().catch(() => {});
       appWindow.setFocus().catch(() => {});
+      appWindow.requestUserAttention(1).catch(() => {});
+      setFlashing(true);
     });
     return () => {
       unlisten.then((fn) => fn());
     };
   }, []);
+
+  // Auto-clear flash after animation completes (10 seconds)
+  useEffect(() => {
+    if (!flashing) return;
+    const timer = setTimeout(() => setFlashing(false), 10_000);
+    return () => clearTimeout(timer);
+  }, [flashing]);
 
   // Escape key closes settings
   useEffect(() => {
@@ -114,7 +124,7 @@ function App() {
   }
 
   return (
-    <div className="h-full w-full bg-[rgba(15,23,42,0.88)] backdrop-blur-xl border border-[rgba(200,168,78,0.06)] rounded-lg shadow-[0_2px_12px_rgba(0,0,0,0.3)] khatam-pattern">
+    <div className={`h-full w-full bg-[rgba(15,23,42,0.88)] backdrop-blur-xl border border-[rgba(200,168,78,0.06)] rounded-lg shadow-[0_2px_12px_rgba(0,0,0,0.3)] khatam-pattern${flashing ? ' animate-prayer-flash' : ''}`}>
       {layout === 'horizontal' && (
         <PrayerTimesBar
           prayerTimes={prayerTimes}
