@@ -12,6 +12,7 @@ import type {
 } from '../types';
 import { CALCULATION_METHODS, PRAYER_NAMES, RECITERS } from '../lib/constants';
 import { CITIES } from '../lib/cities';
+import Switch from './Switch';
 
 const SETTINGS_SIZE = { width: 400, height: 520 };
 
@@ -45,7 +46,13 @@ export default function SettingsPanel({
     <div className="h-full w-full flex flex-col bg-[rgba(26,38,66,0.95)] backdrop-blur-xl overflow-y-auto khatam-pattern">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-[rgba(200,168,78,0.10)]">
-        <h2 className="text-sm font-semibold text-[#E8E2D6]">Settings</h2>
+        <div className="flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-[#C8A84E]">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M12 1l1.09 2.41a7 7 0 0 1 2.18.9l2.55-.77.9 1.56-1.46 2.18a7 7 0 0 1 0 2.38l1.46 2.18-.9 1.56-2.55-.77a7 7 0 0 1-2.18.9L12 23l-1.09-2.41a7 7 0 0 1-2.18-.9l-2.55.77-.9-1.56 1.46-2.18a7 7 0 0 1 0-2.38L5.28 12.16l.9-1.56 2.55.77a7 7 0 0 1 2.18-.9L12 1z" />
+          </svg>
+          <h2 className="text-sm font-semibold text-[#E8E2D6]">Settings</h2>
+        </div>
         <button
           onClick={onClose}
           className="w-6 h-6 flex items-center justify-center rounded text-[#7B89A1] hover:text-[#E8E2D6] focus:outline-none focus:ring-1 focus:ring-[#C8A84E]"
@@ -58,7 +65,7 @@ export default function SettingsPanel({
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
         {/* Location */}
         <Section title="Location">
-          <Toggle
+          <Switch
             label="Auto-detect location"
             checked={settings.autoDetectLocation}
             onChange={(v) => onUpdate('autoDetectLocation', v)}
@@ -124,12 +131,12 @@ export default function SettingsPanel({
 
         {/* Notifications & Audio */}
         <Section title="Notifications">
-          <Toggle
+          <Switch
             label="Notifications"
             checked={settings.notificationsEnabled}
             onChange={(v) => onUpdate('notificationsEnabled', v)}
           />
-          <Toggle
+          <Switch
             label="Adhan audio"
             checked={settings.adhanEnabled}
             onChange={(v) => onUpdate('adhanEnabled', v)}
@@ -196,7 +203,7 @@ export default function SettingsPanel({
               </button>
             </div>
           </div>
-          <Toggle
+          <Switch
             label="Show countdown"
             checked={settings.showCountdown}
             onChange={(v) => onUpdate('showCountdown', v)}
@@ -234,26 +241,6 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <label className="flex items-center justify-between cursor-pointer group">
-      <span className="text-xs text-[#7B89A1] group-hover:text-[#E8E2D6]">{label}</span>
-      <button
-        role="switch"
-        aria-checked={checked}
-        onClick={() => onChange(!checked)}
-        className={`w-8 h-4 rounded-full relative transition-colors focus:outline-none focus:ring-1 focus:ring-[#C8A84E]
-          ${checked ? 'bg-[#C8A84E]' : 'bg-[#4A5568]'}`}
-      >
-        <span
-          className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform
-            ${checked ? 'translate-x-[18px]' : 'translate-x-0.5'}`}
-        />
-      </button>
-    </label>
-  );
-}
-
 function Select<T extends string>({
   label,
   value,
@@ -276,7 +263,7 @@ function Select<T extends string>({
       >
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>
-            {opt.label}{opt.hint ? ` — ${opt.hint}` : ''}
+            {opt.label}{opt.hint ? ` - ${opt.hint}` : ''}
           </option>
         ))}
       </select>
@@ -317,8 +304,7 @@ function CityPicker({ value, onSelect }: {
 }
 
 function AutostartToggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
-  async function toggle() {
-    const next = !checked;
+  async function toggle(next: boolean) {
     try {
       if (next) {
         await enable();
@@ -329,33 +315,16 @@ function AutostartToggle({ checked, onChange }: { checked: boolean; onChange: (v
       const actual = await isEnabled();
       onChange(actual);
     } catch {
-      // Silently fail — autostart may not be supported
+      // Silently fail - autostart may not be supported
       onChange(next);
     }
   }
 
-  return (
-    <label className="flex items-center justify-between cursor-pointer group">
-      <span className="text-xs text-[#7B89A1] group-hover:text-[#E8E2D6]">Launch at startup</span>
-      <button
-        role="switch"
-        aria-checked={checked}
-        onClick={toggle}
-        className={`w-8 h-4 rounded-full relative transition-colors focus:outline-none focus:ring-1 focus:ring-[#C8A84E]
-          ${checked ? 'bg-[#C8A84E]' : 'bg-[#4A5568]'}`}
-      >
-        <span
-          className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform
-            ${checked ? 'translate-x-[18px]' : 'translate-x-0.5'}`}
-        />
-      </button>
-    </label>
-  );
+  return <Switch label="Launch at startup" checked={checked} onChange={toggle} />;
 }
 
 function AlwaysOnTopToggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
-  async function toggle() {
-    const next = !checked;
+  async function toggle(next: boolean) {
     try {
       const appWindow = Window.getCurrent();
       await appWindow.setAlwaysOnTop(next);
@@ -365,21 +334,5 @@ function AlwaysOnTopToggle({ checked, onChange }: { checked: boolean; onChange: 
     }
   }
 
-  return (
-    <label className="flex items-center justify-between cursor-pointer group">
-      <span className="text-xs text-[#7B89A1] group-hover:text-[#E8E2D6]">Always on top</span>
-      <button
-        role="switch"
-        aria-checked={checked}
-        onClick={toggle}
-        className={`w-8 h-4 rounded-full relative transition-colors focus:outline-none focus:ring-1 focus:ring-[#C8A84E]
-          ${checked ? 'bg-[#C8A84E]' : 'bg-[#4A5568]'}`}
-      >
-        <span
-          className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform
-            ${checked ? 'translate-x-[18px]' : 'translate-x-0.5'}`}
-        />
-      </button>
-    </label>
-  );
+  return <Switch label="Always on top" checked={checked} onChange={toggle} />;
 }
