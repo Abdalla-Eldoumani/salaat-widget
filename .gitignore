@@ -8,3 +8,6 @@ salaat-widget@*
 
 # stray tauri cli file
 tauri
+
+# playwright mcp test artifacts
+.playwright-mcp/
