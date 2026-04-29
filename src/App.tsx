@@ -15,7 +15,7 @@ import Onboarding from './components/Onboarding';
 
 function App() {
   const { settings, loading, updateSetting } = useSettings();
-  const { layout, onDragEnd } = useWindowDock(settings.onboardingComplete, settings.dockEdge);
+  const { layout, onDragEnd, restoreToDock } = useWindowDock(settings.onboardingComplete, settings.dockEdge);
   const geo = useGeolocation(settings.autoDetectLocation);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [flashing, setFlashing] = useState(false);
@@ -91,8 +91,10 @@ function App() {
 
   function closeSettings() {
     setSettingsOpen(false);
-    // Trigger dock resize to restore widget dimensions
-    onDragEnd();
+    // Restore to the saved dock layout. Don't run snap detection here - the
+    // settings panel inflates the window to 400x540, so a position-based snap
+    // check would mis-classify the widget as floating and shrink it to compact.
+    restoreToDock();
   }
 
   if (loading) return null;
@@ -102,7 +104,7 @@ function App() {
       <Onboarding
         settings={settings}
         onUpdate={updateSetting}
-        onComplete={() => onDragEnd()}
+        onComplete={() => restoreToDock()}
         geoLocation={geo.location}
         geoDetecting={geo.detecting}
         onGeoDetect={geo.detect}
