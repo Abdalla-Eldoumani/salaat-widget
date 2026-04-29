@@ -9,6 +9,7 @@ interface UseWindowDockResult {
   dockEdge: DockEdge;
   layout: WidgetLayout;
   onDragEnd: () => void;
+  restoreToDock: () => Promise<void>;
 }
 
 async function getMonitorBounds(): Promise<MonitorBounds | null> {
@@ -97,6 +98,51 @@ export function useWindowDock(enabled: boolean = true, defaultEdge: DockEdge = D
     }
   }, []);
 
+  // Apply current dock layout's size+position. Used to restore from settings/onboarding
+  // overlays whose oversized window must not bleed into the snap-detection logic.
+  const restoreToDock = useCallback(async () => {
+    if (snapping.current) return;
+    snapping.current = true;
+    try {
+      const appWindow = Window.getCurrent();
+      const monitorBounds = await getMonitorBounds();
+      if (!monitorBounds) return;
+      const size = getDimensionsForLayout(layout);
+      let pos: { x: number; y: number };
+      if (dockEdge === 'floating') {
+        const current = await appWindow.outerPosition();
+        pos = { x: current.x / monitorBounds.scaleFactor, y: current.y / monitorBounds.scaleFactor };
+      } else {
+        pos = getSnapPosition(dockEdge, size, monitorBounds);
+      }
+      await appWindow.setSize(new LogicalSize(size.width, size.height));
+      await appWindow.setPosition(new LogicalPosition(pos.x, pos.y));
+    } finally {
+      setTimeout(() => { snapping.current = false; }, 300);
+    }
+  }, [dockEdge, layout]);
+
+  // Listen for window move events (native drag, programmatic move). Debounce so
+  // we only run snap detection once the user finishes moving. This is what makes
+  // the layout auto-flip when the user drags between edges - relying on a
+  // mouseup listener instead misses the event when the OS owns the drag loop.
+  useEffect(() => {
+    if (!enabled) return;
+    let moveTimer: ReturnType<typeof setTimeout> | null = null;
+    let unlisten: (() => void) | undefined;
+
+    Window.getCurrent().onMoved(() => {
+      if (snapping.current) return;
+      if (moveTimer) clearTimeout(moveTimer);
+      moveTimer = setTimeout(() => { checkSnap(); }, 200);
+    }).then((u) => { unlisten = u; }).catch(() => {});
+
+    return () => {
+      if (moveTimer) clearTimeout(moveTimer);
+      unlisten?.();
+    };
+  }, [enabled, checkSnap]);
+
   // Initialize: snap to restored position or default dock edge, then show window
   useEffect(() => {
     if (!enabled) return;
@@ -146,5 +192,5 @@ export function useWindowDock(enabled: boolean = true, defaultEdge: DockEdge = D
     return () => { cancelled = true; };
   }, [enabled, defaultEdge, checkSnap]);
 
-  return { dockEdge, layout, onDragEnd: checkSnap };
+  return { dockEdge, layout, onDragEnd: checkSnap, restoreToDock };
 }

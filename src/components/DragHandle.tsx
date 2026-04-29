@@ -6,20 +6,14 @@ interface DragHandleProps {
 }
 
 export default function DragHandle({ orientation, onDragEnd }: DragHandleProps) {
+  // Snap detection is wired via the window's `onMoved` listener in useWindowDock,
+  // which fires reliably during native drag on every platform. We just kick off
+  // the OS drag here.
   const handleMouseDown = async (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
     e.preventDefault();
-    // On Windows, startDragging() resolves at drag-start, so awaiting it and then
-    // calling onDragEnd snaps against the starting position. Wait for real mouseup
-    // before firing the snap check.
-    const onUp = () => {
-      window.removeEventListener('mouseup', onUp);
-      window.removeEventListener('pointerup', onUp);
-      onDragEnd?.();
-    };
-    window.addEventListener('mouseup', onUp);
-    window.addEventListener('pointerup', onUp);
-    const appWindow = Window.getCurrent();
-    await appWindow.startDragging();
+    await Window.getCurrent().startDragging();
+    onDragEnd?.();
   };
 
   const isHorizontal = orientation === 'horizontal';
