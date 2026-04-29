@@ -42,7 +42,8 @@ src/
 │   ├── PrayerCard.tsx       Single prayer time display
 │   ├── CountdownTimer.tsx   "Next · Maghrib in 2h 15m"
 │   ├── DragHandle.tsx       Grip lines for window dragging
-│   ├── SettingsPanel.tsx    Full settings UI (400x520 overlay)
+│   ├── SettingsPanel.tsx    Full settings UI (400x540 overlay)
+│   ├── Switch.tsx           Toggle switch primitive (DPI-stable thumb)
 │   ├── Onboarding.tsx       Three-step first-launch flow
 │   ├── MuteButton.tsx       Speaker icon, toggles backend mute
 │   ├── SettingsButton.tsx   Gear icon
@@ -63,8 +64,8 @@ The widget has three visual layouts, picked by dock position:
 
 | Dock edge | Layout | Size | Component |
 |-----------|--------|------|-----------|
-| top, bottom | horizontal | 720x72 | PrayerTimesBar |
-| left, right | vertical | 140x440 | PrayerTimesSidebar |
+| top, bottom | horizontal | 560x60 | PrayerTimesBar |
+| left, right | vertical | 200x420 | PrayerTimesSidebar |
 | floating | compact | 240x280 | PrayerTimesCompact |
 
 `useWindowDock` detects which edge the window is near after a drag ends, then snaps it into position and switches the layout. The threshold is 40 logical pixels. Window resizing is deferred to a `useEffect` so React re-renders the correct layout component before the window changes size (prevents a flash of the wrong layout during transitions).
@@ -84,7 +85,7 @@ The widget has three visual layouts, picked by dock position:
 
 Settings load from `tauri-plugin-store` on mount (single `entries()` call). Each change writes to the store with a 100ms debounce and updates React state. The store file lives in the OS app data directory.
 
-Settings that affect backend behavior (adhan, notifications, muting) are applied at the frontend level before sending data to the backend. The backend doesn't read the store directly — it uses whatever the frontend pushes.
+Settings that affect backend behavior (adhan, notifications, muting) are applied at the frontend level before sending data to the backend. The backend doesn't read the store directly - it uses whatever the frontend pushes.
 
 ## Backend structure
 
@@ -100,7 +101,7 @@ src-tauri/src/
     ├── mod.rs      Re-exports
     ├── audio.rs    play_adhan, stop_adhan, set_mute, get_mute
     ├── prayer.rs   set_prayer_times
-    └── location.rs (empty — geolocation is frontend-only)
+    └── location.rs (empty - geolocation is frontend-only)
 ```
 
 ### Audio architecture
