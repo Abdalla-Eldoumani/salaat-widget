@@ -2,6 +2,37 @@
 
 How to build, run, and develop the Salaat Widget.
 
+## Installing as an end user
+
+Download the installer for your OS from the [Releases](../../../releases) page.
+
+**Windows**
+
+The NSIS installer (`Salaat Widget_x64-setup.exe`) is the smallest option and auto-installs the WebView2 runtime if needed. The MSI (`Salaat Widget_x64_en-US.msi`) is preferred for IT-managed environments. SmartScreen may flag the unsigned binary on first run; click **More info** then **Run anyway**.
+
+**macOS**
+
+Drag the `.app` from the `.dmg` to `/Applications`. On first launch right-click and choose **Open** to bypass Gatekeeper for unsigned binaries. macOS will prompt once for notification permission when the first prayer time fires.
+
+**Linux**
+
+```bash
+# Debian / Ubuntu
+sudo dpkg -i salaat-widget_*_amd64.deb
+
+# Or use the AppImage (portable)
+chmod +x Salaat-Widget_*.AppImage
+./Salaat-Widget_*.AppImage
+```
+
+If you use GNOME, install the AppIndicator extension so the tray icon shows. KDE Plasma, XFCE, and most other DEs work out of the box.
+
+## Background behaviour
+
+The widget lives in the system tray. Closing the window hides it; the process keeps running so prayer alerts can fire. Right-click the tray icon to quit.
+
+The first time the app launches it positions itself at the top edge of your primary monitor. Drag the grip to move it; release near another edge to snap there.
+
 ## Prerequisites
 
 | Tool | Version | Install |
@@ -48,14 +79,14 @@ Output goes to `src-tauri/target/release/bundle/`:
 - **macOS**: `.dmg` and `.app`
 - **Linux**: `.deb` and `.AppImage`
 
-The standalone executable is at `src-tauri/target/release/salaat-widget.exe` (Windows) — you can run it directly without installing.
+The standalone executable is at `src-tauri/target/release/salaat-widget.exe` (Windows) - you can run it directly without installing.
 
 ## Project layout
 
 | Directory | What's there |
 |-----------|-------------|
-| `src/` | React frontend — components, hooks, library code |
-| `src-tauri/` | Rust backend — commands, audio, scheduler, tray |
+| `src/` | React frontend - components, hooks, library code |
+| `src-tauri/` | Rust backend - commands, audio, scheduler, tray |
 | `src-tauri/resources/audio/` | Bundled adhan audio files |
 | `src-tauri/icons/` | App icons (generated from 1024x1024 source) |
 | `docs/` | User and developer documentation |
@@ -86,8 +117,8 @@ The tray icons (`tray-default.png`, `tray-playing.png`, `tray-muted.png`) are se
 
 The project has two GitHub Actions workflows:
 
-- **CI** (`.github/workflows/ci.yml`) — runs on every push to `main` and on PRs. Typechecks and builds for all three platforms. Artifacts are uploaded and can be downloaded from the Actions tab.
-- **Release** (`.github/workflows/release.yml`) — runs when you push a version tag (e.g. `git tag v0.1.0 && git push origin v0.1.0`). Builds for all platforms and creates a draft GitHub Release with installers attached. Review the draft and publish it when ready.
+- **CI** (`.github/workflows/ci.yml`) - runs on every push to `main` and on PRs. Typechecks and builds for all three platforms. Artifacts are uploaded and can be downloaded from the Actions tab.
+- **Release** (`.github/workflows/release.yml`) - runs when you push a version tag (e.g. `git tag v0.1.0 && git push origin v0.1.0`). Builds for all platforms and creates a draft GitHub Release with installers attached. Review the draft and publish it when ready.
 
 ## Troubleshooting
 
