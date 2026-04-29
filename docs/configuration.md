@@ -103,9 +103,15 @@ Audio is played through Rust's rodio crate, not the browser. This means it keeps
 
 ## Hide vs quit
 
-Closing the widget window (clicking the X if your platform shows one, or pressing Esc on the settings panel) hides the widget; it does not exit the process. The app keeps running in the system tray so it can fire prayer notifications and play the adhan even with the window hidden.
+Hiding the widget keeps the process running in the tray; quitting stops it. There are three ways to hide:
 
-To fully exit, right-click the tray icon and choose **Quit**. To bring the widget back without quitting, left-click the tray icon or press `Ctrl+Shift+P`.
+- The minus button beside the gold drag grip on the widget itself
+- A click on the tray icon
+- The `Ctrl+Shift+P` global shortcut
+
+All three put the widget out of sight without stopping prayer notifications or the adhan. To bring it back, click the tray icon or press the shortcut again.
+
+To fully exit, right-click the tray icon and choose **Quit**. After quitting, you'll need to launch the app again to start receiving prayer notifications.
 
 ## Keyboard shortcuts
 
