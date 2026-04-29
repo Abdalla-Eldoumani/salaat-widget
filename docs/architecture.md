@@ -12,7 +12,7 @@ Frontend (React, runs in webview)        Backend (Rust, runs natively)
 
 adhan-js calculates prayer times  ──►    set_prayer_times command
                                          Stores times in SchedulerState
-                                         30-second timer loop checks them
+                                         5-second timer loop checks them
 
                                   ◄──    "prayer-time" event when time hits
                                          Native OS notification (if enabled)
@@ -41,7 +41,8 @@ src/
 │   ├── PrayerTimesCompact.tsx  Floating compact layout
 │   ├── PrayerCard.tsx       Single prayer time display
 │   ├── CountdownTimer.tsx   "Next · Maghrib in 2h 15m"
-│   ├── DragHandle.tsx       Grip lines for window dragging
+│   ├── DragHandle.tsx       Three gold grip lines for window dragging
+│   ├── HideButton.tsx       Minus button that hides the window into the tray
 │   ├── SettingsPanel.tsx    Full settings UI (400x540 overlay)
 │   ├── Switch.tsx           Toggle switch primitive (DPI-stable thumb)
 │   ├── Onboarding.tsx       Three-step first-launch flow
@@ -68,7 +69,7 @@ The widget has three visual layouts, picked by dock position:
 | left, right | vertical | 200x420 | PrayerTimesSidebar |
 | floating | compact | 240x280 | PrayerTimesCompact |
 
-`useWindowDock` detects which edge the window is near after a drag ends, then snaps it into position and switches the layout. The threshold is 40 logical pixels. Window resizing is deferred to a `useEffect` so React re-renders the correct layout component before the window changes size (prevents a flash of the wrong layout during transitions).
+`useWindowDock` listens for the window's native `onMoved` events. When the window stops moving for 200ms, it runs edge detection: if the window is within 40 logical pixels of any edge it snaps and switches layout, otherwise it falls back to the floating compact size. The hook also exposes `restoreToDock`, used after closing the settings panel or finishing onboarding to put the widget back at its dock dimensions instead of running snap detection from the inflated overlay size. Window resizing is deferred to a `useEffect` so React re-renders the correct layout component before the window changes size (prevents a flash of the wrong layout during transitions).
 
 ### Prayer time flow
 
@@ -96,7 +97,7 @@ src-tauri/src/
 ├── state.rs        AppState: audio handle, mute flag, scheduler state, tray state
 ├── tray.rs         System tray icon (3 states), context menu, click handler
 ├── audio.rs        AudioHandle: dedicated thread with rodio, mpsc channel
-├── scheduler.rs    30-second timer loop, notification + adhan triggering
+├── scheduler.rs    5-second timer loop, notification + adhan triggering
 └── commands/
     ├── mod.rs      Re-exports
     ├── audio.rs    play_adhan, stop_adhan, set_mute, get_mute
@@ -120,10 +121,10 @@ The tray icon has three variants, embedded at compile time:
 
 ### Scheduler
 
-A tokio background task ticks every 30 seconds. On each tick, it:
+A tokio background task ticks every 5 seconds. On each tick, it:
 
 1. Locks the scheduler state and reads the prayer times
-2. Checks if any prayer time fell within the last 0-29 seconds
+2. Checks if any prayer time fell within the last 0-59 seconds
 3. If yes and it hasn't already been triggered:
    - Emits a `"prayer-time"` event to the frontend (always)
    - Sends a native OS notification (if `sendNotification` is `true` for that prayer)
