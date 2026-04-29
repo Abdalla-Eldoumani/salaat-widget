@@ -37,6 +37,7 @@ export default function PrayerTimesBar({ prayerTimes, countdown, timeFormat, onD
               {i > 0 && <ArabesqueDivider orientation="vertical" />}
               <PrayerCard
                 displayName={prayer.displayName}
+                arabicName={prayer.arabicName}
                 time={prayer.time}
                 state={state}
                 timeFormat={timeFormat}
