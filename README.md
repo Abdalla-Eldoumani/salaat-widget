@@ -14,9 +14,9 @@ Built as sadaqah jariyah.
 - Sends native notifications at each prayer time
 - Detects your location automatically via IP geolocation, or lets you pick from ~130 cities
 - Supports 12 calculation methods (ISNA, MWL, Egyptian, Umm al-Qura, etc.)
-- Per-prayer muting — silence the adhan for individual prayers while keeping the rest
+- Per-prayer muting - silence the adhan for individual prayers while keeping the rest
 - Remembers your settings and window position across restarts
-- Runs in the system tray — closing the window just hides it
+- Runs in the system tray - closing the window just hides it
 
 ## Download
 
@@ -46,15 +46,43 @@ Installers land in `src-tauri/target/release/bundle/`.
 
 On first launch, you'll see a three-step setup:
 
-1. **Location** — auto-detected from your IP, or pick a city manually
-2. **Calculation method** — auto-suggested based on your country, plus madhab and high-latitude options
-3. **Widget placement** — choose which screen edge to dock to
+1. **Location** - auto-detected from your IP, or pick a city manually
+2. **Calculation method** - auto-suggested based on your country, plus madhab and high-latitude options
+3. **Widget placement** - choose which screen edge to dock to
 
 After setup, the widget snaps to your chosen edge and starts showing prayer times. Drag the grip to move it to a different edge. Right-click the tray icon or press `Ctrl+Shift+P` to show/hide the widget.
 
 ## Settings
 
 Click the gear icon on the widget to open settings. Everything is documented in [docs/configuration.md](docs/configuration.md).
+
+## Background process
+
+The widget runs in the system tray. Closing the window hides it; the process keeps running so prayer notifications and the adhan can fire on time. To fully exit, right-click the tray icon and choose **Quit**.
+
+| What | How |
+|------|-----|
+| Bring the widget back | Left-click the tray icon, or press `Ctrl+Shift+P` |
+| Mute the adhan immediately | Speaker icon on the widget, "Mute now" in settings, or "Mute" in the tray menu |
+| Quit the app | Right-click tray icon then **Quit** |
+
+## Where settings are stored
+
+Settings, window position, and onboarding state are stored under the OS app-data directory:
+
+| OS | Path |
+|----|------|
+| Windows | `%APPDATA%\com.salaat.widget\` |
+| macOS | `~/Library/Application Support/com.salaat.widget/` |
+| Linux | `~/.local/share/com.salaat.widget/` |
+
+You can delete this directory to reset all settings; the widget will restart in the onboarding flow.
+
+## First-launch notes
+
+- **Windows**: SmartScreen may flag the unsigned binary. Click **More info** then **Run anyway**. The NSIS installer auto-installs WebView2 if your system lacks it.
+- **macOS**: Gatekeeper blocks unsigned binaries on first launch. Right-click the `.app` and choose **Open** the first time. macOS will also prompt for notification permission the first time a prayer time fires.
+- **Linux**: A working ALSA audio device is required for the adhan. PulseAudio and PipeWire both work since they sit on top of ALSA. If you use GNOME, install the AppIndicator extension so the tray icon appears.
 
 ## Project structure
 
