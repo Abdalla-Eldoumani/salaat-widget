@@ -1,6 +1,6 @@
 # Configuration
 
-All settings are stored in a JSON file managed by `tauri-plugin-store`. You don't need to edit this file by hand — the settings panel covers everything. But if you want to know what each option does, here it is.
+All settings are stored in a JSON file managed by `tauri-plugin-store`. You don't need to edit this file by hand - the settings panel covers everything. But if you want to know what each option does, here it is.
 
 ## Location
 
@@ -9,7 +9,7 @@ All settings are stored in a JSON file managed by `tauri-plugin-store`. You don'
 | `autoDetectLocation` | boolean | `true` | Uses your IP address to find your city via ipapi.co. Turn this off if you're behind a VPN or want to set your location manually. |
 | `latitude` | number | `51.0447` | Latitude in decimal degrees. Positive = north. |
 | `longitude` | number | `-114.0719` | Longitude in decimal degrees. Positive = east. |
-| `timezone` | string | `America/Edmonton` | IANA timezone name. Used for display only — prayer calculations use the system clock. |
+| `timezone` | string | `America/Edmonton` | IANA timezone name. Used for display only - prayer calculations use the system clock. |
 | `locationName` | string | `Calgary, AB` | Human-readable label shown in settings and onboarding. Format: `City, CountryCode`. |
 
 If auto-detect is off, you pick from a list of ~130 cities (see `src/lib/cities.ts`). To add your city, add an entry to that file with `name`, `country`, `countryCode`, `lat`, `lon`, and `timezone`.
@@ -43,9 +43,9 @@ If auto-detect is off, you pick from a list of ~130 cities (see `src/lib/cities.
 
 At latitudes above 48°, Fajr and Isha can get very late or very early (or undefined) during summer. The high-latitude rule decides what to do:
 
-- **Middle of the night** — Splits the night in half. Fajr/Isha are never later/earlier than the midpoint.
-- **Seventh of the night** — Uses 1/7th of the night for Fajr and Isha.
-- **Twilight angle** — Uses a reduced twilight angle.
+- **Middle of the night** - Splits the night in half. Fajr/Isha are never later/earlier than the midpoint.
+- **Seventh of the night** - Uses 1/7th of the night for Fajr and Isha.
+- **Twilight angle** - Uses a reduced twilight angle.
 
 This setting only appears during onboarding if your latitude is above 48°. You can always change it in settings.
 
@@ -71,7 +71,17 @@ This setting only appears during onboarding if your latitude is above 48°. You 
 
 The reciter dropdown only appears when adhan audio is enabled.
 
-Muting is separate from the global mute button. The mute button (speaker icon on the widget, or "Mute" in the tray menu) silences all audio immediately. The `mutedPrayers` setting lets you silence specific prayers permanently.
+### Mute hierarchy
+
+There are three independent mute controls. They compose:
+
+| Control | Scope | Persistence | Where to find it |
+|---------|-------|-------------|------------------|
+| Adhan audio toggle | Permanently disable all adhan playback | Stored in settings | Settings panel, Notifications section |
+| Per-prayer mute (`mutedPrayers`) | Permanently silence specific prayers | Stored in settings | Settings panel, "Mute individual prayers" |
+| Global mute (now) | Temporarily silence all adhan | Backend state, not stored | Speaker icon on the widget, tray menu, settings panel "Mute now" row |
+
+If the Adhan audio toggle is off, nothing plays regardless of mute state. If it's on, per-prayer mute filters which prayers can play, and global mute is the final on/off applied at playback time. The tray icon turns red when global mute is on.
 
 Audio is played through Rust's rodio crate, not the browser. This means it keeps playing even if the widget loses focus.
 
@@ -90,6 +100,12 @@ Audio is played through Rust's rodio crate, not the browser. This means it keeps
 | `dockEdge` | string | `top` | Which screen edge the widget snaps to. `top`, `bottom`, `left`, `right`, or `floating`. |
 | `alwaysOnTop` | boolean | `true` | Keep the widget above other windows. |
 | `autostart` | boolean | `false` | Launch the widget when you log in. Uses the OS-native autostart mechanism. |
+
+## Hide vs quit
+
+Closing the widget window (clicking the X if your platform shows one, or pressing Esc on the settings panel) hides the widget; it does not exit the process. The app keeps running in the system tray so it can fire prayer notifications and play the adhan even with the window hidden.
+
+To fully exit, right-click the tray icon and choose **Quit**. To bring the widget back without quitting, left-click the tray icon or press `Ctrl+Shift+P`.
 
 ## Keyboard shortcuts
 
