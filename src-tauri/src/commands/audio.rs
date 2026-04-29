@@ -1,10 +1,15 @@
 use tauri::{AppHandle, Manager, State};
 
+use crate::audio::is_known_reciter;
 use crate::state::{AppState, TrayState};
 use crate::tray::update_tray_icon;
 
 #[tauri::command]
 pub fn play_adhan(app: AppHandle, state: State<'_, AppState>, reciter: String) -> Result<(), String> {
+    if !is_known_reciter(&reciter) {
+        return Err(format!("unknown reciter: {reciter}"));
+    }
+
     let resource_dir = app.path().resource_dir().map_err(|e| e.to_string())?;
     let path = resource_dir.join(format!("audio/{reciter}.mp3"));
 

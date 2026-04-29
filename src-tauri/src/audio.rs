@@ -6,6 +6,23 @@ use std::thread;
 
 use rodio::{Decoder, OutputStream, Sink};
 
+/// Audio file keys shipped under `resources/audio/`. The frontend's RECITERS
+/// map (src/lib/constants.ts) is the source of truth for the UI, but the
+/// backend validates against this list before joining `reciter` into a file
+/// path so a malformed string from IPC can't escape the resource directory.
+pub const ALLOWED_RECITERS: &[&str] = &[
+    "adhan-makkah",
+    "adhan-madinah",
+    "adhan-alaqsa",
+    "adhan-abdul-basit",
+    "adhan-minshawi",
+    "adhan-egypt",
+];
+
+pub fn is_known_reciter(reciter: &str) -> bool {
+    ALLOWED_RECITERS.contains(&reciter)
+}
+
 enum AudioCommand {
     Play(PathBuf),
     Stop,

@@ -112,7 +112,7 @@ fn check_prayer_times(app: &AppHandle) {
 
     // Play adhan if not muted and this prayer has adhan
     let muted = *state.muted.lock().unwrap();
-    if !muted && has_adhan {
+    if !muted && has_adhan && crate::audio::is_known_reciter(&reciter) {
         let audio = state.audio.lock().unwrap();
         if let Some(handle) = audio.as_ref() {
             if let Ok(resource_dir) = app.path().resource_dir() {
