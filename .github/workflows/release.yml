@@ -67,7 +67,14 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: 'Salaat Widget ${{ github.ref_name }}'
-          releaseBody: 'Download the installer for your platform below.'
+          releaseBody: |
+            Download the installer for your platform below.
+
+            **Windows** - Pick the NSIS `.exe` for the smallest download (auto-installs the WebView2 runtime). The MSI is for IT-managed installs. SmartScreen may warn on first run; click *More info* then *Run anyway*.
+
+            **macOS** - Open the `.dmg` and drag the app into Applications. On first launch right-click and choose *Open* to bypass Gatekeeper.
+
+            **Linux** - Install the `.deb` with `sudo dpkg -i salaat-widget_*_amd64.deb`, or run the AppImage after `chmod +x`. GNOME users need the AppIndicator extension for the tray icon.
           releaseDraft: true
           prerelease: false
           args: --ci
