@@ -32,7 +32,7 @@ impl SchedulerState {
 
 pub fn start_scheduler(app: AppHandle) {
     tauri::async_runtime::spawn(async move {
-        let mut tick = interval(Duration::from_secs(30));
+        let mut tick = interval(Duration::from_secs(5));
         loop {
             tick.tick().await;
             check_prayer_times(&app);
@@ -56,8 +56,8 @@ fn check_prayer_times(app: &AppHandle) {
             };
 
             let diff = (now - prayer_time).num_seconds();
-            // Trigger if 0-29 seconds past the prayer time
-            if diff >= 0 && diff < 30 {
+            // Trigger if 0-59 seconds past the prayer time
+            if diff >= 0 && diff < 60 {
                 if scheduler.last_triggered.as_deref() == Some(&entry.name) {
                     continue;
                 }
