@@ -13,8 +13,9 @@ import type {
 import { CALCULATION_METHODS, PRAYER_NAMES, RECITERS } from '../lib/constants';
 import { CITIES } from '../lib/cities';
 import Switch from './Switch';
+import MuteButton from './MuteButton';
 
-const SETTINGS_SIZE = { width: 400, height: 520 };
+const SETTINGS_SIZE = { width: 400, height: 540 };
 
 interface SettingsPanelProps {
   settings: SalaatSettings;
@@ -141,6 +142,13 @@ export default function SettingsPanel({
             checked={settings.adhanEnabled}
             onChange={(v) => onUpdate('adhanEnabled', v)}
           />
+          <div className="flex items-center justify-between">
+            <div className="flex flex-col">
+              <span className="text-xs text-[#7B89A1]">Mute now</span>
+              <span className="text-[10px] text-[#4A5568]">Silences adhan playback. Tray icon turns red.</span>
+            </div>
+            <MuteButton />
+          </div>
           {settings.adhanEnabled && (
             <Select
               label="Reciter"
