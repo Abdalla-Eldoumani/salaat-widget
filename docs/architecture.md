@@ -64,7 +64,7 @@ The widget has three visual layouts, picked by dock position:
 
 | Dock edge | Layout | Size | Component |
 |-----------|--------|------|-----------|
-| top, bottom | horizontal | 560x60 | PrayerTimesBar |
+| top, bottom | horizontal | 640x60 | PrayerTimesBar |
 | left, right | vertical | 200x420 | PrayerTimesSidebar |
 | floating | compact | 240x280 | PrayerTimesCompact |
 
