@@ -5,6 +5,7 @@ import CountdownTimer from './CountdownTimer';
 import DragHandle from './DragHandle';
 import MuteButton from './MuteButton';
 import SettingsButton from './SettingsButton';
+import HideButton from './HideButton';
 
 interface PrayerTimesCompactProps {
   prayerTimes: PrayerTimeResult;
@@ -42,7 +43,10 @@ export default function PrayerTimesCompact({ prayerTimes, countdown, timeFormat,
   return (
     <div className="h-full w-full flex flex-col p-3 gap-2">
       <div className="flex items-center justify-between">
-        <DragHandle orientation="horizontal" onDragEnd={onDragEnd} />
+        <div className="flex items-center gap-1">
+          <DragHandle orientation="horizontal" onDragEnd={onDragEnd} />
+          <HideButton />
+        </div>
         <div className="flex gap-1">
           <MuteButton />
           <SettingsButton onClick={onSettingsOpen} />

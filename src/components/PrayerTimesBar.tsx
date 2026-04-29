@@ -6,6 +6,7 @@ import DragHandle from './DragHandle';
 import ArabesqueDivider from './ArabesqueDivider';
 import MuteButton from './MuteButton';
 import SettingsButton from './SettingsButton';
+import HideButton from './HideButton';
 
 interface PrayerTimesBarProps {
   prayerTimes: PrayerTimeResult;
@@ -21,7 +22,10 @@ export default function PrayerTimesBar({ prayerTimes, countdown, timeFormat, onD
 
   return (
     <div className="h-full w-full flex items-center px-2 gap-1">
-      <DragHandle orientation="vertical" onDragEnd={onDragEnd} />
+      <div className="flex items-center gap-1">
+        <DragHandle orientation="vertical" onDragEnd={onDragEnd} />
+        <HideButton />
+      </div>
 
       <div className="flex items-center gap-0 flex-1">
         {prayers.map((prayer, i) => {

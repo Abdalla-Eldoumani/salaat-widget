@@ -6,6 +6,7 @@ import DragHandle from './DragHandle';
 import ArabesqueDivider from './ArabesqueDivider';
 import MuteButton from './MuteButton';
 import SettingsButton from './SettingsButton';
+import HideButton from './HideButton';
 
 interface PrayerTimesSidebarProps {
   prayerTimes: PrayerTimeResult;
@@ -36,7 +37,10 @@ export default function PrayerTimesSidebar({ prayerTimes, countdown, timeFormat,
 
   return (
     <div className="h-full w-full flex flex-col items-center py-2 gap-1">
-      <DragHandle orientation="horizontal" onDragEnd={onDragEnd} />
+      <div className="flex items-center justify-between w-full px-2">
+        <DragHandle orientation="horizontal" onDragEnd={onDragEnd} />
+        <HideButton />
+      </div>
 
       <div className="flex flex-col gap-0 flex-1 w-full px-3">
         {prayers.map((prayer, i) => {
