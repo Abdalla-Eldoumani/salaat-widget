@@ -29,9 +29,9 @@ If you use GNOME, install the AppIndicator extension so the tray icon shows. KDE
 
 ## Background behaviour
 
-The widget lives in the system tray. Closing the window hides it; the process keeps running so prayer alerts can fire. Right-click the tray icon to quit.
+The widget lives in the system tray. Hiding the window keeps the process running so prayer alerts can fire. Click the tray icon (or press `Ctrl+Shift+P`) to toggle the window. Right-click the tray icon and choose **Quit** to stop the process.
 
-The first time the app launches it positions itself at the top edge of your primary monitor. Drag the grip to move it; release near another edge to snap there.
+The first time the app launches it positions itself at the top edge of your primary monitor. Grab the gold grip and drag the widget; release near another edge and it reorients on its own (vertical sidebar on the left or right, horizontal bar on the top or bottom). Drop it near the centre of the screen and it shrinks to a small floating window.
 
 ## Prerequisites
 
