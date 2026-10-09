@@ -31,7 +31,7 @@ export default function PrayerRow({ prayer, status, timeFormat, names }: PrayerR
     >
       {current && <Star className="absolute start-1.5 top-1/2 size-2 -translate-y-1/2 text-gold-hi" />}
       {names === 'stacked' ? (
-        <span className="flex flex-col">{latin}{arabic}</span>
+        <span className="flex flex-col items-start">{latin}{arabic}</span>
       ) : (
         <span className="flex items-baseline gap-2">{latin}{arabic}</span>
       )}
