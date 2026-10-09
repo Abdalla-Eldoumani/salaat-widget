@@ -9,12 +9,14 @@ import type {
 } from '../types';
 import { CALCULATION_METHODS, COUNTRY_TO_METHOD } from '../lib/constants';
 import { CITIES } from '../lib/cities';
+import { formatLocationName } from '../lib/location';
 
 interface OnboardingProps {
   settings: SalaatSettings;
   onUpdate: <K extends keyof SalaatSettings>(key: K, value: SalaatSettings[K]) => Promise<void>;
-  geoLocation: LocationResult;
+  geoLocation: LocationResult | null;
   geoDetecting: boolean;
+  geoError?: string | null;
   onGeoDetect: () => Promise<void>;
 }
 
@@ -23,18 +25,20 @@ export default function Onboarding({
   onUpdate,
   geoLocation,
   geoDetecting,
+  geoError,
   onGeoDetect,
 }: OnboardingProps) {
   const [step, setStep] = useState(settings.onboardingStep);
 
   // Step 1 state
   const [manualMode, setManualMode] = useState(false);
-  const [selectedCity, setSelectedCity] = useState(settings.locationName);
+  // Empty until the user picks, so a default never gets saved as if it were a choice.
+  const [selectedCity, setSelectedCity] = useState(
+    CITIES.some((c) => `${c.name}, ${c.countryCode}` === settings.locationName) ? settings.locationName : '',
+  );
 
   // Step 2 state - auto-suggest method from detected country
-  const suggestedMethod = geoLocation.countryCode
-    ? COUNTRY_TO_METHOD[geoLocation.countryCode] ?? settings.calculationMethod
-    : settings.calculationMethod;
+  const suggestedMethod = (geoLocation && COUNTRY_TO_METHOD[geoLocation.countryCode]) || settings.calculationMethod;
   const [method, setMethod] = useState<CalculationMethodName>(suggestedMethod);
   const [madhab, setMadhab] = useState<MadhabName>(settings.madhab);
   const [highLatRule, setHighLatRule] = useState<HighLatitudeRuleName>(settings.highLatitudeRule);
@@ -44,32 +48,30 @@ export default function Onboarding({
 
   // Update suggested method when geo detection completes
   useEffect(() => {
-    if (geoLocation.countryCode && step === 0) {
+    if (geoLocation && step === 0) {
       const suggested = COUNTRY_TO_METHOD[geoLocation.countryCode];
       if (suggested) setMethod(suggested);
     }
-  }, [geoLocation.countryCode, step]);
+  }, [geoLocation, step]);
 
   const currentLat = manualMode
-    ? (CITIES.find((c) => `${c.name}, ${c.countryCode}` === selectedCity)?.lat ?? geoLocation.latitude)
-    : geoLocation.latitude;
+    ? (CITIES.find((c) => `${c.name}, ${c.countryCode}` === selectedCity)?.lat ?? settings.latitude)
+    : (geoLocation?.latitude ?? settings.latitude);
   const isHighLatitude = Math.abs(currentLat) > 48;
 
   async function completeStep1() {
     if (manualMode) {
       const city = CITIES.find((c) => `${c.name}, ${c.countryCode}` === selectedCity);
-      if (city) {
-        await onUpdate('latitude', city.lat);
-        await onUpdate('longitude', city.lon);
-        await onUpdate('timezone', city.timezone);
-        await onUpdate('locationName', `${city.name}, ${city.countryCode}`);
-        await onUpdate('autoDetectLocation', false);
-      }
+      if (!city) return;
+      await onUpdate('latitude', city.lat);
+      await onUpdate('longitude', city.lon);
+      await onUpdate('locationName', `${city.name}, ${city.countryCode}`);
+      await onUpdate('autoDetectLocation', false);
     } else {
+      if (!geoLocation) return;
       await onUpdate('latitude', geoLocation.latitude);
       await onUpdate('longitude', geoLocation.longitude);
-      await onUpdate('timezone', geoLocation.timezone);
-      await onUpdate('locationName', `${geoLocation.city}, ${geoLocation.countryCode}`);
+      await onUpdate('locationName', formatLocationName(geoLocation));
       await onUpdate('autoDetectLocation', true);
     }
     await onUpdate('onboardingStep', 1);
@@ -97,6 +99,7 @@ export default function Onboarding({
           <LocationStep
             geoLocation={geoLocation}
             geoDetecting={geoDetecting}
+            geoError={geoError}
             onGeoDetect={onGeoDetect}
             manualMode={manualMode}
             setManualMode={setManualMode}
@@ -144,6 +147,7 @@ export default function Onboarding({
 function LocationStep({
   geoLocation,
   geoDetecting,
+  geoError,
   onGeoDetect,
   manualMode,
   setManualMode,
@@ -151,8 +155,9 @@ function LocationStep({
   setSelectedCity,
   onContinue,
 }: {
-  geoLocation: LocationResult;
+  geoLocation: LocationResult | null;
   geoDetecting: boolean;
+  geoError?: string | null;
   onGeoDetect: () => Promise<void>;
   manualMode: boolean;
   setManualMode: (v: boolean) => void;
@@ -160,8 +165,9 @@ function LocationStep({
   setSelectedCity: (v: string) => void;
   onContinue: () => void;
 }) {
-  const latDir = geoLocation.latitude >= 0 ? 'N' : 'S';
-  const lonDir = geoLocation.longitude >= 0 ? 'E' : 'W';
+  const latDir = geoLocation && geoLocation.latitude >= 0 ? 'N' : 'S';
+  const lonDir = geoLocation && geoLocation.longitude >= 0 ? 'E' : 'W';
+  const canContinue = manualMode ? selectedCity !== '' : geoLocation !== null;
 
   return (
     <div className="space-y-6">
@@ -175,20 +181,24 @@ function LocationStep({
 
       {!manualMode ? (
         <div className="space-y-3">
-          {geoDetecting ? (
-            <div className="p-4 rounded-lg bg-[rgba(15,23,42,0.85)] border border-[rgba(200,168,78,0.10)]">
+          <div className="p-4 rounded-lg bg-[rgba(15,23,42,0.85)] border border-[rgba(200,168,78,0.10)]" aria-live="polite">
+            {geoDetecting || (!geoLocation && !geoError) ? (
               <p className="text-sm text-[#7B89A1]">Detecting your location...</p>
-            </div>
-          ) : (
-            <div className="p-4 rounded-lg bg-[rgba(15,23,42,0.85)] border border-[rgba(200,168,78,0.10)]">
-              <p className="text-sm font-medium text-[#E8E2D6]">
-                {geoLocation.city}, {geoLocation.country}
+            ) : geoLocation ? (
+              <>
+                <p className="text-sm font-medium text-[#E8E2D6]">
+                  {[geoLocation.city, geoLocation.country].filter(Boolean).join(', ')}
+                </p>
+                <p className="text-[10px] text-[#7B89A1] mt-1">
+                  {Math.abs(geoLocation.latitude).toFixed(2)}{latDir}, {Math.abs(geoLocation.longitude).toFixed(2)}{lonDir}
+                </p>
+              </>
+            ) : (
+              <p className="text-sm text-[#E8E2D6]">
+                Could not detect your location ({geoError}). Try again or choose a city.
               </p>
-              <p className="text-[10px] text-[#7B89A1] mt-1">
-                {Math.abs(geoLocation.latitude).toFixed(2)}{latDir}, {Math.abs(geoLocation.longitude).toFixed(2)}{lonDir}
-              </p>
-            </div>
-          )}
+            )}
+          </div>
           <div className="flex items-center gap-3">
             <button
               onClick={() => setManualMode(true)}
@@ -215,9 +225,7 @@ function LocationStep({
               focus:outline-none focus:ring-1 focus:ring-[#C8A84E]"
             aria-label="Select city"
           >
-            {!CITIES.some((c) => `${c.name}, ${c.countryCode}` === selectedCity) && (
-              <option value={selectedCity}>{selectedCity}</option>
-            )}
+            {selectedCity === '' && <option value="">Choose a city</option>}
             {CITIES.map((city) => {
               const label = `${city.name}, ${city.countryCode}`;
               return (
@@ -236,7 +244,7 @@ function LocationStep({
         </div>
       )}
 
-      <ContinueButton onClick={onContinue} disabled={geoDetecting && !manualMode} />
+      <ContinueButton onClick={onContinue} disabled={!canContinue} />
     </div>
   );
 }
