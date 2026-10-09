@@ -5,14 +5,10 @@
   "windows": ["main"],
   "permissions": [
     "core:default",
-    "notification:default",
     "autostart:allow-enable",
     "autostart:allow-disable",
     "autostart:allow-is-enabled",
     "store:default",
-    "window-state:default",
-    "global-shortcut:allow-register",
-    "global-shortcut:allow-unregister",
     {
       "identifier": "http:default",
       "allow": [{ "url": "https://ipapi.co/*" }]
@@ -21,16 +17,7 @@
     "core:window:allow-set-position",
     "core:window:allow-show",
     "core:window:allow-hide",
-    "core:window:allow-outer-position",
-    "core:window:allow-outer-size",
-    "core:window:allow-current-monitor",
-    "core:window:allow-available-monitors",
     "core:window:allow-start-dragging",
-    "core:window:allow-set-title",
-    "core:window:allow-set-always-on-top",
-    "core:window:allow-set-focus",
-    "core:window:allow-request-user-attention",
-    "core:event:default",
-    "core:app:default"
+    "core:window:allow-set-always-on-top"
   ]
 }
