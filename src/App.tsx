@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import { Window } from '@tauri-apps/api/window';
 import { usePrayerTimes } from './hooks/usePrayerTimes';
 import { useCountdown } from './hooks/useCountdown';
-import { useWindowDock } from './hooks/useWindowDock';
+import { useWindowDock, type Overlay } from './hooks/useWindowDock';
 import { useGeolocation } from './hooks/useGeolocation';
 import { useSettings } from './hooks/useSettings';
 import type { PrayerTimeEventPayload } from './types';
@@ -15,9 +15,17 @@ import Onboarding from './components/Onboarding';
 
 function App() {
   const { settings, loading, updateSetting } = useSettings();
-  const { layout, onDragEnd, restoreToDock } = useWindowDock(settings.onboardingComplete, settings.dockEdge);
   const geo = useGeolocation(settings.autoDetectLocation);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const overlay: Overlay | null = !settings.onboardingComplete ? 'onboarding' : settingsOpen ? 'settings' : null;
+  const { layout, onDragEnd } = useWindowDock({
+    enabled: !loading,
+    savedEdge: settings.dockEdge,
+    overlay,
+    onEdgeChange: (edge) => {
+      updateSetting('dockEdge', edge).catch((err) => console.error('could not save dock edge', err));
+    },
+  });
   const [flashing, setFlashing] = useState(false);
 
   // Use detected location if auto-detect is on, otherwise use stored settings
@@ -77,25 +85,17 @@ function App() {
     return () => clearTimeout(timer);
   }, [flashing]);
 
+  const closeSettings = useCallback(() => setSettingsOpen(false), []);
+
   // Escape key closes settings
   useEffect(() => {
     if (!settingsOpen) return;
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') {
-        closeSettings();
-      }
+      if (e.key === 'Escape') closeSettings();
     }
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, [settingsOpen]);
-
-  function closeSettings() {
-    setSettingsOpen(false);
-    // Restore to the saved dock layout. Don't run snap detection here - the
-    // settings panel inflates the window to 400x540, so a position-based snap
-    // check would mis-classify the widget as floating and shrink it to compact.
-    restoreToDock();
-  }
+  }, [settingsOpen, closeSettings]);
 
   if (loading) return null;
 
@@ -104,7 +104,6 @@ function App() {
       <Onboarding
         settings={settings}
         onUpdate={updateSetting}
-        onComplete={() => restoreToDock()}
         geoLocation={geo.location}
         geoDetecting={geo.detecting}
         onGeoDetect={geo.detect}

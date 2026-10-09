@@ -1,6 +1,4 @@
-import { useEffect } from 'react';
 import { Window } from '@tauri-apps/api/window';
-import { LogicalSize } from '@tauri-apps/api/dpi';
 import { enable, disable, isEnabled } from '@tauri-apps/plugin-autostart';
 import type {
   SalaatSettings,
@@ -14,8 +12,6 @@ import { CALCULATION_METHODS, PRAYER_NAMES, RECITERS } from '../lib/constants';
 import { CITIES } from '../lib/cities';
 import Switch from './Switch';
 import MuteButton from './MuteButton';
-
-const SETTINGS_SIZE = { width: 400, height: 540 };
 
 interface SettingsPanelProps {
   settings: SalaatSettings;
@@ -34,15 +30,6 @@ export default function SettingsPanel({
   geoDetecting,
   onGeoDetect,
 }: SettingsPanelProps) {
-  // Resize window when settings open
-  useEffect(() => {
-    const appWindow = Window.getCurrent();
-    appWindow.setSize(new LogicalSize(SETTINGS_SIZE.width, SETTINGS_SIZE.height)).catch(() => {});
-    return () => {
-      // Size will be restored by the dock system on next onDragEnd or init
-    };
-  }, []);
-
   return (
     <div className="h-full w-full flex flex-col bg-[rgba(26,38,66,0.95)] backdrop-blur-xl overflow-y-auto khatam-pattern">
       {/* Header */}

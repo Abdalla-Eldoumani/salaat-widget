@@ -1,6 +1,4 @@
 import { useEffect, useState } from 'react';
-import { Window, currentMonitor } from '@tauri-apps/api/window';
-import { LogicalSize, LogicalPosition } from '@tauri-apps/api/dpi';
 import type {
   SalaatSettings,
   LocationResult,
@@ -10,15 +8,11 @@ import type {
   DockEdge,
 } from '../types';
 import { CALCULATION_METHODS, COUNTRY_TO_METHOD } from '../lib/constants';
-import { getLayoutForEdge, getDimensionsForLayout, getSnapPosition } from '../lib/dock-engine';
 import { CITIES } from '../lib/cities';
-
-const ONBOARDING_SIZE = { width: 400, height: 500 };
 
 interface OnboardingProps {
   settings: SalaatSettings;
   onUpdate: <K extends keyof SalaatSettings>(key: K, value: SalaatSettings[K]) => Promise<void>;
-  onComplete: () => void;
   geoLocation: LocationResult;
   geoDetecting: boolean;
   onGeoDetect: () => Promise<void>;
@@ -27,7 +21,6 @@ interface OnboardingProps {
 export default function Onboarding({
   settings,
   onUpdate,
-  onComplete,
   geoLocation,
   geoDetecting,
   onGeoDetect,
@@ -48,14 +41,6 @@ export default function Onboarding({
 
   // Step 3 state
   const [dockEdge, setDockEdge] = useState<DockEdge>(settings.dockEdge);
-
-  // Resize and center window for onboarding
-  useEffect(() => {
-    const appWindow = Window.getCurrent();
-    appWindow.setSize(new LogicalSize(ONBOARDING_SIZE.width, ONBOARDING_SIZE.height)).catch(() => {});
-    appWindow.center().catch(() => {});
-    appWindow.show().catch(() => {});
-  }, []);
 
   // Update suggested method when geo detection completes
   useEffect(() => {
@@ -100,33 +85,9 @@ export default function Onboarding({
   }
 
   async function completeStep3() {
-    // Position window at chosen edge before completing
-    try {
-      const appWindow = Window.getCurrent();
-      const monitor = await currentMonitor();
-      if (monitor) {
-        const scale = monitor.scaleFactor;
-        const monitorBounds = {
-          x: monitor.position.x / scale,
-          y: monitor.position.y / scale,
-          width: monitor.size.width / scale,
-          height: monitor.size.height / scale,
-          scaleFactor: scale,
-        };
-        const layout = getLayoutForEdge(dockEdge);
-        const size = getDimensionsForLayout(layout);
-        const pos = getSnapPosition(dockEdge, size, monitorBounds);
-        await appWindow.setSize(new LogicalSize(size.width, size.height));
-        await appWindow.setPosition(new LogicalPosition(pos.x, pos.y));
-      }
-    } catch {
-      // Position will be handled by useWindowDock init
-    }
-
     await onUpdate('dockEdge', dockEdge);
     await onUpdate('onboardingStep', 3);
     await onUpdate('onboardingComplete', true);
-    onComplete();
   }
 
   return (

@@ -1,196 +1,181 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { Window, currentMonitor, availableMonitors } from '@tauri-apps/api/window';
-import { LogicalPosition, LogicalSize } from '@tauri-apps/api/dpi';
-import type { DockEdge, WidgetLayout, MonitorBounds, WindowBounds } from '../types';
-import { calculateSnap, getDimensionsForLayout, getLayoutForEdge, isWithinBounds, getSnapPosition } from '../lib/dock-engine';
-import { DEFAULT_SETTINGS } from '../lib/constants';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Window } from '@tauri-apps/api/window';
+import type { DockEdge, WidgetLayout, WindowBounds } from '../types';
+import { OVERLAY_DIMENSIONS } from '../lib/constants';
+import { calculateSnap, clampToMonitor, frameForEdge, getLayoutForEdge, getSnapPosition, isWithinBounds } from '../lib/dock-engine';
+import {
+  getAllMonitorBounds,
+  getMonitorBounds,
+  getPrimaryMonitorBounds,
+  getWindowBounds,
+  setWindowFrame,
+} from '../lib/monitor';
 
-interface UseWindowDockResult {
-  dockEdge: DockEdge;
+export type Overlay = keyof typeof OVERLAY_DIMENSIONS;
+
+interface Options {
+  enabled: boolean;
+  savedEdge: DockEdge;
+  // Settings and onboarding borrow the window; the dock is restored when they close.
+  overlay: Overlay | null;
+  onEdgeChange: (edge: DockEdge) => void;
+}
+
+interface Result {
   layout: WidgetLayout;
   onDragEnd: () => void;
-  restoreToDock: () => Promise<void>;
 }
 
-async function getMonitorBounds(): Promise<MonitorBounds | null> {
-  const monitor = await currentMonitor();
-  if (!monitor) return null;
+// A frame we set comes back from the OS a pixel or two off on fractional scale factors.
+const SAME_FRAME_PX = 2;
+// Move events arrive continuously during a drag; snapping waits until they stop.
+const MOVE_SETTLE_MS = 200;
 
-  const scale = monitor.scaleFactor;
-  return {
-    x: monitor.position.x / scale,
-    y: monitor.position.y / scale,
-    width: monitor.size.width / scale,
-    height: monitor.size.height / scale,
-    scaleFactor: scale,
-  };
+function sameFrame(a: WindowBounds, b: WindowBounds): boolean {
+  return (
+    Math.abs(a.x - b.x) <= SAME_FRAME_PX &&
+    Math.abs(a.y - b.y) <= SAME_FRAME_PX &&
+    Math.abs(a.width - b.width) <= SAME_FRAME_PX &&
+    Math.abs(a.height - b.height) <= SAME_FRAME_PX
+  );
 }
 
-async function getWindowBounds(appWindow: Window, scale: number): Promise<WindowBounds> {
-  const pos = await appWindow.outerPosition();
-  const size = await appWindow.outerSize();
-  return {
-    x: pos.x / scale,
-    y: pos.y / scale,
-    width: size.width / scale,
-    height: size.height / scale,
-  };
-}
+export function useWindowDock({ enabled, savedEdge, overlay, onEdgeChange }: Options): Result {
+  const [view, setView] = useState({ layout: getLayoutForEdge(savedEdge), tick: 0 });
 
-interface PendingResize {
-  width: number;
-  height: number;
-  x: number;
-  y: number;
-}
+  const pendingFrame = useRef<WindowBounds | null>(null);
+  const lastFrame = useRef<WindowBounds | null>(null);
+  const floatingOrigin = useRef<{ x: number; y: number } | null>(null);
+  const shown = useRef(false);
+  // True until this hook has placed the window itself, so the geometry the window-state
+  // plugin restored is only read once.
+  const restoredGeometry = useRef(true);
 
-export function useWindowDock(enabled: boolean = true, defaultEdge: DockEdge = DEFAULT_SETTINGS.dockEdge): UseWindowDockResult {
-  const [dockEdge, setDockEdge] = useState<DockEdge>(defaultEdge);
-  const [layout, setLayout] = useState<WidgetLayout>(getLayoutForEdge(defaultEdge));
-  const snapping = useRef(false);
-  const pendingResize = useRef<PendingResize | null>(null);
-  const initDone = useRef(false);
-
-  // Apply window resize AFTER React has re-rendered with the new layout
+  const savedEdgeRef = useRef(savedEdge);
+  const onEdgeChangeRef = useRef(onEdgeChange);
+  const overlayRef = useRef(overlay);
   useEffect(() => {
-    const resize = pendingResize.current;
-    if (!resize) return;
-    pendingResize.current = null;
+    savedEdgeRef.current = savedEdge;
+    onEdgeChangeRef.current = onEdgeChange;
+    overlayRef.current = overlay;
+  });
 
+  // The window is resized only after React has drawn the new layout, so the content never
+  // shows squeezed into the old window size.
+  const applyFrame = useCallback(async (frame: WindowBounds) => {
     const appWindow = Window.getCurrent();
-    (async () => {
-      await appWindow.setSize(new LogicalSize(resize.width, resize.height));
-      await appWindow.setPosition(new LogicalPosition(resize.x, resize.y));
-      if (!initDone.current) {
-        initDone.current = true;
+    lastFrame.current = frame;
+    try {
+      await setWindowFrame(appWindow, frame, frame);
+    } finally {
+      // A window that could not be placed is still better visible than lost.
+      if (!shown.current) {
+        shown.current = true;
         await appWindow.show();
       }
-    })().catch(() => {});
-  }, [dockEdge, layout]);
-
-  const checkSnap = useCallback(async () => {
-    if (snapping.current) return;
-    snapping.current = true;
-
-    try {
-      const appWindow = Window.getCurrent();
-      const monitorBounds = await getMonitorBounds();
-      if (!monitorBounds) return;
-
-      const windowBounds = await getWindowBounds(appWindow, monitorBounds.scaleFactor);
-      const snap = calculateSnap(windowBounds, monitorBounds);
-
-      if (snap) {
-        pendingResize.current = { ...snap.size, ...snap.position };
-        setDockEdge(snap.edge);
-        setLayout(snap.layout);
-      } else {
-        const compactSize = getDimensionsForLayout('compact');
-        // Keep current position for floating
-        const pos = await appWindow.outerPosition();
-        const scale = monitorBounds.scaleFactor;
-        pendingResize.current = { ...compactSize, x: pos.x / scale, y: pos.y / scale };
-        setDockEdge('floating');
-        setLayout('compact');
-      }
-    } finally {
-      setTimeout(() => { snapping.current = false; }, 300);
     }
   }, []);
 
-  // Apply current dock layout's size+position. Used to restore from settings/onboarding
-  // overlays whose oversized window must not bleed into the snap-detection logic.
-  const restoreToDock = useCallback(async () => {
-    if (snapping.current) return;
-    snapping.current = true;
-    try {
-      const appWindow = Window.getCurrent();
-      const monitorBounds = await getMonitorBounds();
-      if (!monitorBounds) return;
-      const size = getDimensionsForLayout(layout);
-      let pos: { x: number; y: number };
-      if (dockEdge === 'floating') {
-        const current = await appWindow.outerPosition();
-        pos = { x: current.x / monitorBounds.scaleFactor, y: current.y / monitorBounds.scaleFactor };
-      } else {
-        pos = getSnapPosition(dockEdge, size, monitorBounds);
-      }
-      await appWindow.setSize(new LogicalSize(size.width, size.height));
-      await appWindow.setPosition(new LogicalPosition(pos.x, pos.y));
-    } finally {
-      setTimeout(() => { snapping.current = false; }, 300);
-    }
-  }, [dockEdge, layout]);
-
-  // Listen for window move events (native drag, programmatic move). Debounce so
-  // we only run snap detection once the user finishes moving. This is what makes
-  // the layout auto-flip when the user drags between edges - relying on a
-  // mouseup listener instead misses the event when the OS owns the drag loop.
   useEffect(() => {
-    if (!enabled) return;
-    let moveTimer: ReturnType<typeof setTimeout> | null = null;
-    let unlisten: (() => void) | undefined;
+    const frame = pendingFrame.current;
+    if (!frame) return;
+    pendingFrame.current = null;
+    applyFrame(frame).catch((err) => console.error('window placement failed', err));
+  }, [view.tick, applyFrame]);
 
-    Window.getCurrent().onMoved(() => {
-      if (snapping.current) return;
-      if (moveTimer) clearTimeout(moveTimer);
-      moveTimer = setTimeout(() => { checkSnap(); }, 200);
-    }).then((u) => { unlisten = u; }).catch(() => {});
+  const dockAt = useCallback((edge: DockEdge, frame: WindowBounds) => {
+    pendingFrame.current = frame;
+    if (edge === 'floating') floatingOrigin.current = { x: frame.x, y: frame.y };
+    if (edge !== savedEdgeRef.current) onEdgeChangeRef.current(edge);
+    setView((v) => ({ layout: getLayoutForEdge(edge), tick: v.tick + 1 }));
+  }, []);
+
+  // Runs after a drag: dock to the nearest edge, or float where the widget was dropped.
+  const checkSnap = useCallback(async () => {
+    if (overlayRef.current) return;
+    const monitor = await getMonitorBounds();
+    if (!monitor) return;
+    const bounds = await getWindowBounds(Window.getCurrent(), monitor.scaleFactor);
+    if (lastFrame.current && sameFrame(bounds, lastFrame.current)) return;
+
+    const snap = calculateSnap(bounds, monitor);
+    if (snap) {
+      dockAt(snap.edge, { ...snap.size, ...snap.position });
+    } else {
+      dockAt('floating', frameForEdge('floating', monitor, { x: bounds.x, y: bounds.y }));
+    }
+  }, [dockAt]);
+
+  useEffect(() => {
+    if (!enabled || overlay) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let unlisten: (() => void) | undefined;
+    let cancelled = false;
+
+    Window.getCurrent()
+      .onMoved(() => {
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+          checkSnap().catch((err) => console.error('dock check failed', err));
+        }, MOVE_SETTLE_MS);
+      })
+      .then((stop) => {
+        if (cancelled) stop();
+        else unlisten = stop;
+      })
+      .catch((err) => console.error('could not watch window moves', err));
 
     return () => {
-      if (moveTimer) clearTimeout(moveTimer);
+      cancelled = true;
+      clearTimeout(timer);
       unlisten?.();
     };
-  }, [enabled, checkSnap]);
+  }, [enabled, overlay, checkSnap]);
 
-  // Initialize: snap to restored position or default dock edge, then show window
+  // Places the window: first launch, return from an overlay, or an overlay opening.
   useEffect(() => {
     if (!enabled) return;
     let cancelled = false;
 
-    async function init() {
+    async function place() {
       const appWindow = Window.getCurrent();
-      const monitorBounds = await getMonitorBounds();
-      if (!monitorBounds || cancelled) return;
+      const current = await getMonitorBounds();
+      const bounds = current ? await getWindowBounds(appWindow, current.scaleFactor) : null;
 
-      const windowBounds = await getWindowBounds(appWindow, monitorBounds.scaleFactor);
-      const allMonitors = await availableMonitors();
-      const monitorList: MonitorBounds[] = allMonitors.map((m) => ({
-        x: m.position.x / m.scaleFactor,
-        y: m.position.y / m.scaleFactor,
-        width: m.size.width / m.scaleFactor,
-        height: m.size.height / m.scaleFactor,
-        scaleFactor: m.scaleFactor,
-      }));
-
-      const onScreen = isWithinBounds(
-        { x: windowBounds.x, y: windowBounds.y },
-        { width: windowBounds.width, height: windowBounds.height },
-        monitorList,
-      );
-
-      // Try to snap to nearest edge from restored position
-      const snap = onScreen ? calculateSnap(windowBounds, monitorBounds) : null;
-
-      if (snap) {
-        pendingResize.current = { ...snap.size, ...snap.position };
-        setDockEdge(snap.edge);
-        setLayout(snap.layout);
-      } else {
-        // First launch or off-screen - use saved/default dock position
-        const edgeLayout = getLayoutForEdge(defaultEdge);
-        const size = getDimensionsForLayout(edgeLayout);
-        const pos = getSnapPosition(defaultEdge, size, monitorBounds);
-
-        pendingResize.current = { ...size, ...pos };
-        setDockEdge(defaultEdge);
-        setLayout(edgeLayout);
+      if (overlay) {
+        const monitor = current ?? (await getPrimaryMonitorBounds());
+        if (!monitor || cancelled) return;
+        const size = OVERLAY_DIMENSIONS[overlay];
+        // Settings opens where the widget is, pulled back in; onboarding opens centred.
+        const position = overlay === 'settings' && bounds
+          ? clampToMonitor({ x: bounds.x, y: bounds.y }, size, monitor)
+          : getSnapPosition('floating', size, monitor);
+        restoredGeometry.current = false;
+        await applyFrame({ ...size, ...position });
+        return;
       }
+
+      // A window the user left on a monitor that is gone gets the primary monitor instead.
+      let monitor = current;
+      let origin = bounds ? { x: bounds.x, y: bounds.y } : null;
+      if (restoredGeometry.current) {
+        const onScreen = bounds !== null && isWithinBounds(bounds, bounds, await getAllMonitorBounds());
+        if (!onScreen) {
+          monitor = await getPrimaryMonitorBounds();
+          origin = null;
+        }
+      } else {
+        origin = floatingOrigin.current;
+      }
+      if (!monitor || cancelled) return;
+
+      restoredGeometry.current = false;
+      dockAt(savedEdgeRef.current, frameForEdge(savedEdgeRef.current, monitor, origin));
     }
 
-    init().catch(() => {});
+    place().catch((err) => console.error('window placement failed', err));
     return () => { cancelled = true; };
-  }, [enabled, defaultEdge, checkSnap]);
+  }, [enabled, overlay, applyFrame, dockAt]);
 
-  return { dockEdge, layout, onDragEnd: checkSnap, restoreToDock };
+  return { layout: view.layout, onDragEnd: () => { checkSnap().catch(() => {}); } };
 }
