@@ -145,6 +145,12 @@ export const WIDGET_DIMENSIONS = {
   compact:    { width: 240, height: 280 },
 } as const;
 
+// Settings and onboarding replace the widget and need more room than any dock layout.
+export const OVERLAY_DIMENSIONS = {
+  settings:   { width: 400, height: 540 },
+  onboarding: { width: 400, height: 500 },
+} as const;
+
 // How close (logical pixels) the window must be to an edge before snapping.
 export const SNAP_THRESHOLD_PX = 40;
 
