@@ -60,6 +60,20 @@ export function clampToMonitor(
   };
 }
 
+// The frame a widget docked at `edge` occupies. A floating widget keeps its own origin when it
+// has one (pulled back inside the monitor if the layout got larger) and is centred otherwise.
+export function frameForEdge(
+  edge: DockEdge,
+  monitor: MonitorBounds,
+  floatingOrigin: { x: number; y: number } | null,
+): WindowBounds {
+  const size = getDimensionsForLayout(getLayoutForEdge(edge));
+  const position = edge === 'floating' && floatingOrigin
+    ? clampToMonitor(floatingOrigin, size, monitor)
+    : getSnapPosition(edge, size, monitor);
+  return { ...size, ...position };
+}
+
 export function getLayoutForEdge(edge: DockEdge): WidgetLayout {
   if (edge === 'top' || edge === 'bottom') return 'horizontal';
   if (edge === 'left' || edge === 'right') return 'vertical';
