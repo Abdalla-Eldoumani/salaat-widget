@@ -1,4 +1,4 @@
-import { Window, currentMonitor, availableMonitors, type Monitor } from '@tauri-apps/api/window';
+import { Window, currentMonitor, primaryMonitor, availableMonitors, type Monitor } from '@tauri-apps/api/window';
 import { LogicalPosition, LogicalSize } from '@tauri-apps/api/dpi';
 import type { MonitorBounds, WindowBounds } from '../types';
 
@@ -18,6 +18,11 @@ function toBounds(monitor: Monitor): MonitorBounds {
 
 export async function getMonitorBounds(): Promise<MonitorBounds | null> {
   const monitor = await currentMonitor();
+  return monitor ? toBounds(monitor) : null;
+}
+
+export async function getPrimaryMonitorBounds(): Promise<MonitorBounds | null> {
+  const monitor = await primaryMonitor();
   return monitor ? toBounds(monitor) : null;
 }
 
