@@ -3,8 +3,13 @@ use std::io::BufReader;
 use std::path::PathBuf;
 use std::sync::mpsc;
 use std::thread;
+use std::time::Duration;
 
-use rodio::{Decoder, OutputStream, Sink};
+use rodio::{Decoder, OutputStream, OutputStreamHandle, Sink};
+use tauri::{AppHandle, Manager};
+
+use crate::state::{AppState, TrayState};
+use crate::tray::update_tray_icon;
 
 /// Audio file keys shipped under `resources/audio/`. The frontend's RECITERS
 /// map (src/lib/constants.ts) is the source of truth for the UI, but the
@@ -23,6 +28,9 @@ pub fn is_known_reciter(reciter: &str) -> bool {
     ALLOWED_RECITERS.contains(&reciter)
 }
 
+/// How often the audio thread checks whether the adhan has finished.
+const POLL: Duration = Duration::from_millis(500);
+
 enum AudioCommand {
     Play(PathBuf),
     Stop,
@@ -35,48 +43,43 @@ pub struct AudioHandle {
 }
 
 impl AudioHandle {
-    pub fn try_new() -> Option<Self> {
+    /// The output device is opened on the first `Play`, and again after a failure, so a
+    /// machine that starts with no audio device (autostart at login) still plays later.
+    pub fn spawn(app: AppHandle) -> Self {
         let (tx, rx) = mpsc::channel::<AudioCommand>();
 
         thread::spawn(move || {
-            let (_stream, stream_handle) = match OutputStream::try_default() {
-                Ok(s) => s,
-                Err(_) => return, // no audio device - thread exits silently
-            };
-
+            let mut output: Option<(OutputStream, OutputStreamHandle)> = None;
             let mut sink: Option<Sink> = None;
 
-            for cmd in rx {
-                match cmd {
-                    AudioCommand::Play(path) => {
+            loop {
+                match rx.recv_timeout(POLL) {
+                    Ok(AudioCommand::Play(path)) => {
                         if let Some(s) = sink.take() {
                             s.stop();
                         }
-                        let file = match File::open(&path) {
-                            Ok(f) => f,
-                            Err(_) => continue,
-                        };
-                        let source = match Decoder::new(BufReader::new(file)) {
-                            Ok(s) => s,
-                            Err(_) => continue,
-                        };
-                        let new_sink = match Sink::try_new(&stream_handle) {
-                            Ok(s) => s,
-                            Err(_) => continue,
-                        };
-                        new_sink.append(source);
-                        sink = Some(new_sink);
+                        sink = start_playback(&mut output, &path);
+                        if sink.is_none() {
+                            report_finished(&app);
+                        }
                     }
-                    AudioCommand::Stop => {
+                    Ok(AudioCommand::Stop) => {
                         if let Some(s) = sink.take() {
                             s.stop();
                         }
                     }
+                    Err(mpsc::RecvTimeoutError::Timeout) => {
+                        if sink.as_ref().is_some_and(Sink::empty) {
+                            sink = None;
+                            report_finished(&app);
+                        }
+                    }
+                    Err(mpsc::RecvTimeoutError::Disconnected) => return,
                 }
             }
         });
 
-        Some(Self { tx })
+        Self { tx }
     }
 
     pub fn play(&self, path: &std::path::Path) -> Result<(), String> {
@@ -89,5 +92,47 @@ impl AudioHandle {
         self.tx
             .send(AudioCommand::Stop)
             .map_err(|e| format!("audio thread disconnected: {e}"))
+    }
+}
+
+/// A stale device handle (headphones unplugged, default device changed) fails at `Sink::try_new`,
+/// so one retry reopens the default device before giving up.
+fn start_playback(output: &mut Option<(OutputStream, OutputStreamHandle)>, path: &std::path::Path) -> Option<Sink> {
+    let file = File::open(path).map_err(|e| eprintln!("adhan file {}: {e}", path.display())).ok()?;
+    let source = Decoder::new(BufReader::new(file)).map_err(|e| eprintln!("adhan decode: {e}")).ok()?;
+
+    for attempt in 0..2 {
+        if output.is_none() {
+            match OutputStream::try_default() {
+                Ok(pair) => *output = Some(pair),
+                Err(e) => {
+                    eprintln!("no audio output device: {e}");
+                    return None;
+                }
+            }
+        }
+        let handle = &output.as_ref()?.1;
+        match Sink::try_new(handle) {
+            Ok(sink) => {
+                sink.append(source);
+                return Some(sink);
+            }
+            Err(e) => {
+                eprintln!("audio sink (attempt {}): {e}", attempt + 1);
+                *output = None;
+            }
+        }
+    }
+    None
+}
+
+/// Return the tray icon to its resting state once playback ends or fails to start.
+fn report_finished(app: &AppHandle) {
+    let state = app.state::<AppState>();
+    let muted = *state.muted.lock().unwrap();
+    let mut tray = state.tray_state.lock().unwrap();
+    if *tray == TrayState::Playing {
+        *tray = TrayState::resting(muted);
+        update_tray_icon(app, *tray);
     }
 }

@@ -22,14 +22,12 @@ pub fn run() {
         .plugin(tauri_plugin_http::init())
         .manage(AppState::new())
         .invoke_handler(tauri::generate_handler![
-            commands::audio::play_adhan,
-            commands::audio::stop_adhan,
             commands::audio::set_mute,
             commands::audio::get_mute,
             commands::prayer::set_prayer_times,
         ])
         .setup(|app| {
-            // Create system tray
+            let _ = app.state::<AppState>().audio.set(audio::AudioHandle::spawn(app.handle().clone()));
             tray::create_tray(app.handle())?;
 
             // Register Ctrl+Shift+P to toggle widget visibility

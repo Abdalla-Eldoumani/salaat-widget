@@ -117,30 +117,13 @@ fn check_prayer_times(app: &AppHandle) {
     if muted || !entry.has_adhan || !crate::audio::is_known_reciter(&entry.reciter) {
         return;
     }
-    let audio = state.audio.lock().unwrap();
-    let (Some(handle), Ok(resource_dir)) = (audio.as_ref(), app.path().resource_dir()) else {
+    let (Some(audio), Ok(resource_dir)) = (state.audio.get(), app.path().resource_dir()) else {
         return;
     };
     let path = resource_dir.join(format!("audio/{}.mp3", entry.reciter));
-    if handle.play(&path).is_ok() {
-        // Show "playing" tray icon during adhan
+    if audio.play(&path).is_ok() {
         *state.tray_state.lock().unwrap() = TrayState::Playing;
         update_tray_icon(app, TrayState::Playing);
-
-        // Revert to default after playback (~2min typical adhan)
-        let app_clone = app.clone();
-        tauri::async_runtime::spawn(async move {
-            tokio::time::sleep(Duration::from_secs(120)).await;
-            let st = app_clone.state::<AppState>();
-            let current = *st.tray_state.lock().unwrap();
-            // Only revert if still in Playing state (not manually muted since)
-            if current == TrayState::Playing {
-                let muted_now = *st.muted.lock().unwrap();
-                let new_state = if muted_now { TrayState::Muted } else { TrayState::Default };
-                *st.tray_state.lock().unwrap() = new_state;
-                update_tray_icon(&app_clone, new_state);
-            }
-        });
     }
 }
 
