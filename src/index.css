@@ -101,7 +101,9 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-:focus-visible {
+/* Screen titles take focus from code so a screen reader starts at the top; they are not tab
+   stops and carry no ring. */
+:focus-visible:not([tabindex='-1']) {
   outline: 2px solid var(--gold);
   outline-offset: 2px;
 }
