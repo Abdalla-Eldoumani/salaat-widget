@@ -11,6 +11,8 @@ import type {
   PrayerTimeResult,
   PrayerTime,
   PrayerTimeEntry,
+  PrayerState,
+  DaySchedule,
   CalculationMethodName,
   MadhabName,
   HighLatitudeRuleName,
@@ -51,6 +53,55 @@ function prayerToName(prayer: string): PrayerName | null {
     asr: 'asr', maghrib: 'maghrib', isha: 'isha',
   };
   return map[prayer] ?? null;
+}
+
+function buildParams(method: CalculationMethodName, madhab: MadhabName, highLatRule: HighLatitudeRuleName) {
+  const params = METHOD_MAP[method]();
+  params.madhab = MADHAB_MAP[madhab];
+  params.highLatitudeRule = HIGH_LAT_MAP[highLatRule];
+  return params;
+}
+
+export function calculateDaySchedule(
+  latitude: number,
+  longitude: number,
+  date: Date,
+  method: CalculationMethodName,
+  madhab: MadhabName,
+  highLatRule: HighLatitudeRuleName = 'MiddleOfTheNight',
+): DaySchedule {
+  const coordinates = new Coordinates(latitude, longitude);
+  const params = buildParams(method, madhab, highLatRule);
+  const pt = new PrayerTimes(coordinates, date, params);
+  const tomorrow = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1);
+
+  return {
+    prayers: [
+      makePrayerTime('fajr', pt.fajr),
+      makePrayerTime('sunrise', pt.sunrise),
+      makePrayerTime('dhuhr', pt.dhuhr),
+      makePrayerTime('asr', pt.asr),
+      makePrayerTime('maghrib', pt.maghrib),
+      makePrayerTime('isha', pt.isha),
+    ],
+    nextFajr: new PrayerTimes(coordinates, tomorrow, params).fajr,
+  };
+}
+
+// Sorted because near the polar circle twilight times can fall on the far side of the day.
+export function resolvePrayerState({ prayers, nextFajr }: DaySchedule, now: Date): PrayerState {
+  const t = now.getTime();
+  const timeline = prayers
+    .filter((p) => !isInvalidTime(p.time))
+    .sort((a, b) => a.time.getTime() - b.time.getTime());
+
+  const passed = timeline.filter((p) => p.time.getTime() <= t);
+  const currentPrayer = passed.length > 0 ? passed[passed.length - 1].name : null;
+
+  const upcoming = timeline.find((p) => p.time.getTime() > t);
+  if (upcoming) return { currentPrayer, nextPrayer: upcoming.name, nextPrayerTime: upcoming.time };
+  if (!isInvalidTime(nextFajr)) return { currentPrayer, nextPrayer: 'fajr', nextPrayerTime: nextFajr };
+  return { currentPrayer, nextPrayer: null, nextPrayerTime: null };
 }
 
 export function calculatePrayerTimes(
@@ -95,15 +146,29 @@ function makePrayerTime(name: PrayerName, time: Date): PrayerTime {
   };
 }
 
-// Converts PrayerTimeResult into the serializable format the Rust backend expects.
-export function toSchedulerEntries(result: PrayerTimeResult, notificationsEnabled = true, reciter = 'adhan-makkah'): PrayerTimeEntry[] {
-  return result.prayers.map((p) => ({
-    name: p.name,
-    time: p.time.toISOString(),
-    hasAdhan: p.hasAdhan,
-    sendNotification: notificationsEnabled,
-    reciter,
-  }));
+interface SchedulerPreferences {
+  adhanEnabled: boolean;
+  mutedPrayers: PrayerName[];
+  notificationsEnabled: boolean;
+  reciter: string;
+}
+
+// Sunrise is a landmark, not a prayer, so it never reaches the scheduler. Tomorrow's Fajr
+// is included so it still fires if the app misses the midnight rollover.
+export function toSchedulerEntries({ prayers, nextFajr }: DaySchedule, prefs: SchedulerPreferences): PrayerTimeEntry[] {
+  const fajr = prayers.find((p) => p.name === 'fajr');
+  const candidates = prayers.filter((p) => p.hasAdhan);
+  if (fajr) candidates.push({ ...fajr, time: nextFajr });
+
+  return candidates
+    .filter((p) => !isInvalidTime(p.time))
+    .map((p) => ({
+      name: p.name,
+      time: p.time.toISOString(),
+      hasAdhan: prefs.adhanEnabled && !prefs.mutedPrayers.includes(p.name),
+      sendNotification: prefs.notificationsEnabled,
+      reciter: prefs.reciter,
+    }));
 }
 
 export function formatPrayerTime(date: Date, format: '12h' | '24h'): string {
