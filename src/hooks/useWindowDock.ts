@@ -23,7 +23,6 @@ interface Options {
 
 interface Result {
   layout: WidgetLayout;
-  onDragEnd: () => void;
 }
 
 // A frame we set comes back from the OS a pixel or two off on fractional scale factors.
@@ -177,5 +176,5 @@ export function useWindowDock({ enabled, savedEdge, overlay, onEdgeChange }: Opt
     return () => { cancelled = true; };
   }, [enabled, overlay, applyFrame, dockAt]);
 
-  return { layout: view.layout, onDragEnd: () => { checkSnap().catch(() => {}); } };
+  return { layout: view.layout };
 }
