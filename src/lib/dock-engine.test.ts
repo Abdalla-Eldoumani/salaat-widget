@@ -4,6 +4,7 @@ import {
   calculateSnap,
   classifyDockEdge,
   clampToMonitor,
+  frameForEdge,
   getLayoutForEdge,
   getSnapPosition,
   isWithinBounds,
@@ -63,6 +64,29 @@ describe('snapping to an edge', () => {
       size: { width: 200, height: 420 },
       position: { x: 0, y: 310 },
     });
+  });
+});
+
+describe('frame for a placement', () => {
+  it('docks a top bar centred against the top of the work area', () => {
+    expect(frameForEdge('top', monitor, null)).toEqual({ x: 640, y: 0, width: 640, height: 60 });
+  });
+
+  it('docks a left sidebar centred against the left edge', () => {
+    expect(frameForEdge('left', monitor, { x: 999, y: 999 })).toEqual({ x: 0, y: 310, width: 200, height: 420 });
+  });
+
+  it('keeps a floating widget where it was', () => {
+    expect(frameForEdge('floating', monitor, { x: 300, y: 200 })).toEqual({ x: 300, y: 200, width: 240, height: 280 });
+  });
+
+  it('pulls a floating widget back in when the compact size would hang off the bottom', () => {
+    // A 640x60 bar dragged to y = 950 becomes 240x280, which needs y <= 1040 - 280 = 760.
+    expect(frameForEdge('floating', monitor, { x: 300, y: 950 })).toEqual({ x: 300, y: 760, width: 240, height: 280 });
+  });
+
+  it('centres a floating widget that has no remembered position', () => {
+    expect(frameForEdge('floating', monitor, null)).toEqual({ x: 840, y: 380, width: 240, height: 280 });
   });
 });
 
