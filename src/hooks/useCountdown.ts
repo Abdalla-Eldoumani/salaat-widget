@@ -1,17 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { COUNTDOWN_TICK_MS } from '../lib/constants';
+import { formatRemaining } from '../lib/prayer-display';
 
-function formatCountdown(ms: number): string {
-  if (ms <= 0) return '0m';
-
-  const totalMinutes = Math.floor(ms / 60_000);
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-
-  if (hours > 0) return `${hours}h ${minutes}m`;
-  return `${minutes}m`;
-}
-
+// Lives in the component that shows the text, so the per-second tick redraws only that part.
 export function useCountdown(target: Date | null): string {
   const [now, setNow] = useState(() => Date.now());
 
@@ -22,8 +13,5 @@ export function useCountdown(target: Date | null): string {
     return () => clearInterval(interval);
   }, [target]);
 
-  if (!target) return '';
-  const remaining = target.getTime() - now;
-  if (remaining <= 0) return '0m';
-  return formatCountdown(remaining);
+  return target ? formatRemaining(target.getTime() - now) : '';
 }
