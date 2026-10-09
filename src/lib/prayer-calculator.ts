@@ -88,7 +88,8 @@ export function calculateDaySchedule(
   };
 }
 
-// Sorted because near the polar circle twilight times can fall on the far side of the day.
+// Sorted because near the polar circle twilight times can fall on the far side of the day, and
+// tomorrow's Fajr can then precede tonight's Isha, so a stale one is never offered as upcoming.
 export function resolvePrayerState({ prayers, nextFajr }: DaySchedule, now: Date): PrayerState {
   const t = now.getTime();
   const timeline = prayers
@@ -100,7 +101,7 @@ export function resolvePrayerState({ prayers, nextFajr }: DaySchedule, now: Date
 
   const upcoming = timeline.find((p) => p.time.getTime() > t);
   if (upcoming) return { currentPrayer, nextPrayer: upcoming.name, nextPrayerTime: upcoming.time };
-  if (!isInvalidTime(nextFajr)) return { currentPrayer, nextPrayer: 'fajr', nextPrayerTime: nextFajr };
+  if (nextFajr.getTime() > t) return { currentPrayer, nextPrayer: 'fajr', nextPrayerTime: nextFajr };
   return { currentPrayer, nextPrayer: null, nextPrayerTime: null };
 }
 
