@@ -7,7 +7,6 @@ interface UseSettingsResult {
   settings: SalaatSettings;
   loading: boolean;
   updateSetting: <K extends keyof SalaatSettings>(key: K, value: SalaatSettings[K]) => Promise<void>;
-  resetSettings: () => Promise<void>;
 }
 
 const STORE_PATH = 'settings.json';
@@ -39,15 +38,12 @@ export function useSettings(): UseSettingsResult {
       const loaded = { ...DEFAULT_SETTINGS };
 
       try {
-        const entries = await store.entries();
-        for (const [key, val] of entries) {
-          if (key in loaded && val !== undefined) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (loaded as any)[key] = val;
-          }
+        for (const [key, value] of await store.entries()) {
+          // Keys from older versions that no longer exist are ignored.
+          if (key in DEFAULT_SETTINGS && value !== undefined) Object.assign(loaded, { [key]: value });
         }
-      } catch {
-        // Fall back to defaults if store read fails entirely
+      } catch (err) {
+        console.error('could not read saved settings, using defaults', err);
       }
 
       setSettings(loaded);
@@ -57,22 +53,18 @@ export function useSettings(): UseSettingsResult {
     loadSettings();
   }, []);
 
+  // The screen changes at once; a failed write is logged and the choice lasts until restart.
   const updateSetting = useCallback(async <K extends keyof SalaatSettings>(
     key: K,
     value: SalaatSettings[K],
   ) => {
-    const store = getStore();
-    await store.set(key, value);
     setSettings((prev) => ({ ...prev, [key]: value }));
-  }, []);
-
-  const resetSettings = useCallback(async () => {
-    const store = getStore();
-    for (const [key, value] of Object.entries(DEFAULT_SETTINGS)) {
-      await store.set(key, value);
+    try {
+      await getStore().set(key, value);
+    } catch (err) {
+      console.error(`could not save ${key}`, err);
     }
-    setSettings(DEFAULT_SETTINGS);
   }, []);
 
-  return { settings, loading, updateSetting, resetSettings };
+  return { settings, loading, updateSetting };
 }
