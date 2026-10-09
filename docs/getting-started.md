@@ -8,21 +8,24 @@ Download the installer for your OS from the [Releases](../../../releases) page.
 
 **Windows**
 
-The NSIS installer (`Salaat Widget_x64-setup.exe`) is the smallest option and auto-installs the WebView2 runtime if needed. The MSI (`Salaat Widget_x64_en-US.msi`) is preferred for IT-managed environments. SmartScreen may flag the unsigned binary on first run; click **More info** then **Run anyway**.
+The NSIS installer (`Salaat.Widget_<version>_x64-setup.exe`) is the smallest option and installs the WebView2 runtime if needed. The MSI (`Salaat.Widget_<version>_x64_en-US.msi`) is for managed environments. The installers are not code-signed, so SmartScreen warns on first run; click **More info** then **Run anyway**.
 
 **macOS**
 
-Drag the `.app` from the `.dmg` to `/Applications`. On first launch right-click and choose **Open** to bypass Gatekeeper for unsigned binaries. macOS will prompt once for notification permission when the first prayer time fires.
+The only macOS build is for Apple Silicon (`Salaat.Widget_<version>_aarch64.dmg`). Drag the `.app` from the `.dmg` to `/Applications`. On first launch right-click and choose **Open** to get past Gatekeeper, since the app is not signed. macOS will prompt once for notification permission when the first prayer time fires.
 
 **Linux**
 
 ```bash
 # Debian / Ubuntu
-sudo dpkg -i salaat-widget_*_amd64.deb
+sudo dpkg -i Salaat.Widget_*_amd64.deb
+
+# Fedora / openSUSE
+sudo rpm -i Salaat.Widget-*.x86_64.rpm
 
 # Or use the AppImage (portable)
-chmod +x Salaat-Widget_*.AppImage
-./Salaat-Widget_*.AppImage
+chmod +x Salaat.Widget_*_amd64.AppImage
+./Salaat.Widget_*_amd64.AppImage
 ```
 
 If you use GNOME, install the AppIndicator extension so the tray icon shows. KDE Plasma, XFCE, and most other DEs work out of the box.
@@ -31,14 +34,14 @@ If you use GNOME, install the AppIndicator extension so the tray icon shows. KDE
 
 The widget lives in the system tray. Hiding the window keeps the process running so prayer alerts can fire. Click the tray icon (or press `Ctrl+Shift+P`) to toggle the window. Right-click the tray icon and choose **Quit** to stop the process.
 
-The first time the app launches it positions itself at the top edge of your primary monitor. Grab the gold grip and drag the widget; release near another edge and it reorients on its own (vertical sidebar on the left or right, horizontal bar on the top or bottom). Drop it near the centre of the screen and it shrinks to a small floating window.
+The first time the app launches it positions itself at the top edge of your primary monitor. Drag the card by any part that is not a button; release near another edge and it reorients on its own (vertical sidebar on the left or right, horizontal bar on the top or bottom). Drop it near the centre of the screen and it shrinks to a small floating window.
 
 ## Prerequisites
 
 | Tool | Version | Install |
 |------|---------|---------|
-| Node.js | 18+ | [nodejs.org](https://nodejs.org/) |
-| pnpm | 9+ | `npm install -g pnpm` |
+| Node.js | 22+ | [nodejs.org](https://nodejs.org/) |
+| pnpm | 10 | `npm install -g pnpm@10` |
 | Rust | stable | [rustup.rs](https://rustup.rs/) |
 
 ### Linux-only dependencies
@@ -66,7 +69,9 @@ pnpm tauri dev
 
 The first build compiles all Rust dependencies and takes a few minutes. After that, incremental builds are fast.
 
-The widget starts hidden and positions itself at the top edge of your screen. If you've never launched before, you'll see the onboarding flow instead.
+The widget starts hidden and shows itself once it has been placed on your saved dock edge. If you've never launched before, you'll see the onboarding flow instead.
+
+The front end alone (`pnpm dev`) shows a notice when opened in a browser, because settings, prayer times, and window control all go through the Tauri shell. Always start it with `pnpm tauri dev`.
 
 ## Building for release
 
@@ -77,9 +82,9 @@ pnpm tauri build
 Output goes to `src-tauri/target/release/bundle/`:
 - **Windows**: `.msi` installer, NSIS `.exe` installer, and standalone `.exe`
 - **macOS**: `.dmg` and `.app`
-- **Linux**: `.deb` and `.AppImage`
+- **Linux**: `.deb`, `.rpm`, and `.AppImage`
 
-The standalone executable is at `src-tauri/target/release/salaat-widget.exe` (Windows) - you can run it directly without installing.
+On Windows the standalone executable is at `src-tauri/target/release/salaat-widget.exe`; you can run it directly without installing.
 
 ## Project layout
 
@@ -97,8 +102,11 @@ The standalone executable is at `src-tauri/target/release/salaat-widget.exe` (Wi
 |---------|-------------|
 | `pnpm tauri dev` | Dev mode with hot reload |
 | `pnpm tauri build` | Production build |
-| `pnpm exec tsc --noEmit` | Type-check the frontend |
+| `pnpm typecheck` | Type-check the frontend |
+| `pnpm lint` | Lint the frontend |
+| `pnpm test` | Run the frontend tests |
 | `cd src-tauri && cargo check` | Type-check the backend |
+| `cd src-tauri && cargo test` | Run the backend tests |
 | `cd src-tauri && cargo clippy` | Lint the Rust code |
 
 ## Regenerating app icons
@@ -117,8 +125,8 @@ The tray icons (`tray-default.png`, `tray-playing.png`, `tray-muted.png`) are se
 
 The project has two GitHub Actions workflows:
 
-- **CI** (`.github/workflows/ci.yml`) - runs on every push to `main` and on PRs. Typechecks and builds for all three platforms. Artifacts are uploaded and can be downloaded from the Actions tab.
-- **Release** (`.github/workflows/release.yml`) - runs when you push a version tag (e.g. `git tag v0.1.0 && git push origin v0.1.0`). Builds for all platforms and creates a draft GitHub Release with installers attached. Review the draft and publish it when ready.
+- **CI** (`.github/workflows/ci.yml`) - runs on every push to `main` and on PRs. Typechecks, lints, and tests the frontend, then builds for all three platforms and runs the Rust tests on Linux. Artifacts are uploaded and can be downloaded from the Actions tab.
+- **Release** (`.github/workflows/release.yml`) - runs when you push a version tag (e.g. `git tag v<version> && git push origin v<version>`). Builds for all platforms and creates a draft GitHub Release with installers attached. Review the draft and publish it when ready.
 
 ## Troubleshooting
 
@@ -142,4 +150,4 @@ CARGO_BUILD_JOBS=2 pnpm tauri dev
 Make sure ALSA is available. PulseAudio and PipeWire both work since they use ALSA underneath. Check that `libasound2` is installed.
 
 **Widget is off-screen after disconnecting a monitor**
-The widget detects this on startup and resets to the default dock edge. If it doesn't, delete the window state file in your OS app data directory and restart.
+On the next start the widget notices that its monitor is gone and appears on the primary monitor. If it still does not show, delete `.window-state.json` from the app config directory (see the README for the path) and restart.
