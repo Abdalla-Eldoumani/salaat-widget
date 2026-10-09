@@ -18,7 +18,7 @@ adhan-js calculates prayer times  ──►    set_prayer_times command
                                          Native OS notification (if enabled)
                                          Plays adhan via rodio (if not muted)
 
-Window position (JS Window API)   ──►    set_position / set_size
+Window frame (JS Window API)      ──►    set_position / set_size
 Settings UI                       ──►    tauri-plugin-store (JSON file)
 ```
 
@@ -28,35 +28,32 @@ Prayer math lives in the frontend because `adhan` is a JavaScript library. The b
 
 ```
 src/
-├── App.tsx                  Routes between onboarding, settings, and widget views
+├── App.tsx                  Picks the screen: onboarding, settings, or the widget
+├── main.tsx                 Mounts App inside the error boundary
 ├── hooks/
-│   ├── usePrayerTimes.ts    Wraps adhan-js, pushes times to backend
+│   ├── usePrayerTimes.ts    Calculates the day, tracks the clock, pushes times to the backend
 │   ├── useCountdown.ts      Ticks every second, formats "2h 15m"
-│   ├── useWindowDock.ts     Snap-to-edge logic, layout switching
+│   ├── useWindowDock.ts     Snap-to-edge logic, layout switching, window placement
 │   ├── useSettings.ts       LazyStore wrapper, loads/saves settings
 │   └── useGeolocation.ts    IP-based location via ipapi.co
 ├── components/
-│   ├── PrayerTimesBar.tsx   Horizontal layout (top/bottom edge)
-│   ├── PrayerTimesSidebar.tsx  Vertical layout (left/right edge)
-│   ├── PrayerTimesCompact.tsx  Floating compact layout
-│   ├── PrayerCard.tsx       Single prayer time display
-│   ├── CountdownTimer.tsx   "Next · Maghrib in 2h 15m"
-│   ├── DragHandle.tsx       Three gold grip lines for window dragging
-│   ├── HideButton.tsx       Minus button that hides the window into the tray
-│   ├── SettingsPanel.tsx    Full settings UI (400x540 overlay)
-│   ├── Switch.tsx           Toggle switch primitive (DPI-stable thumb)
-│   ├── Onboarding.tsx       Three-step first-launch flow
-│   ├── MuteButton.tsx       Speaker icon, toggles backend mute
-│   ├── SettingsButton.tsx   Gear icon
-│   └── ArabesqueDivider.tsx Decorative line divider
+│   ├── Page.tsx             Framed ground shared by every screen
+│   ├── ErrorBoundary.tsx    Message and reload button after a render error
+│   ├── DesktopOnly.tsx      Notice shown when the page is opened outside Tauri
+│   ├── widget/              Bar, Sidebar, Compact layouts and their parts
+│   ├── onboarding/          Three-step first-launch flow
+│   ├── settings/            Settings panel, one file per section
+│   └── ui/                  Buttons, switch, select, radio choice, city picker, ornaments
 ├── lib/
-│   ├── prayer-calculator.ts Maps our settings to adhan-js calls
-│   ├── dock-engine.ts       Pure math: edge detection, snap positions
-│   ├── constants.ts         Defaults, method metadata, prayer names
-│   ├── cities.ts            ~130 cities with coordinates/timezones
-│   └── geo-utils.ts         Haversine distance formula
+│   ├── prayer-calculator.ts Maps settings to adhan-js; picks the current and next prayer
+│   ├── prayer-display.ts    Status, clock text and remaining-time formatting
+│   ├── dock-engine.ts       Pure math: edge detection, snap positions, frames
+│   ├── monitor.ts           Monitor and window geometry through the Tauri API
+│   ├── location.ts          Parses ipapi.co responses; decides when to save a location
+│   ├── constants.ts         Defaults, method metadata, prayer names, sizes
+│   └── cities.ts            131 cities with coordinates
 └── types/
-    └── index.ts             All shared TypeScript types
+    └── index.ts             Shared TypeScript types
 ```
 
 ### Layout system
@@ -65,22 +62,23 @@ The widget has three visual layouts, picked by dock position:
 
 | Dock edge | Layout | Size | Component |
 |-----------|--------|------|-----------|
-| top, bottom | horizontal | 640x60 | PrayerTimesBar |
-| left, right | vertical | 200x420 | PrayerTimesSidebar |
-| floating | compact | 240x280 | PrayerTimesCompact |
+| top, bottom | horizontal | 640x60 | `widget/Bar.tsx` |
+| left, right | vertical | 200x420 | `widget/Sidebar.tsx` |
+| floating | compact | 240x280 | `widget/Compact.tsx` |
 
-`useWindowDock` listens for the window's native `onMoved` events. When the window stops moving for 200ms, it runs edge detection: if the window is within 40 logical pixels of any edge it snaps and switches layout, otherwise it falls back to the floating compact size. The hook also exposes `restoreToDock`, used after closing the settings panel or finishing onboarding to put the widget back at its dock dimensions instead of running snap detection from the inflated overlay size. Window resizing is deferred to a `useEffect` so React re-renders the correct layout component before the window changes size (prevents a flash of the wrong layout during transitions).
+`useWindowDock` listens for the window's native `onMoved` events. When the window stops moving for 200ms, it runs edge detection: if the window is within 40 logical pixels of any edge it snaps and switches layout, otherwise it falls back to the floating compact size. While settings or onboarding is open the hook enlarges the window for that screen and stops watching moves, and when the overlay closes it puts the widget back at its dock frame instead of running snap detection from the inflated size. A window left on a monitor that no longer exists is moved to the primary monitor at startup. Window resizing is deferred to a `useEffect` so React re-renders the correct layout component before the window changes size (prevents a flash of the wrong layout during transitions).
 
 ### Prayer time flow
 
-1. `usePrayerTimes` calls `calculatePrayerTimes()` from `prayer-calculator.ts`
-2. This creates an `adhan.PrayerTimes` object with coordinates, date, and calculation parameters
-3. The result includes all six times, which prayer is current, and which is next
-4. The hook builds `PrayerTimeEntry` objects for each prayer, applying user preferences:
-   - `hasAdhan` is set to `false` if adhan is globally disabled, or this specific prayer is in the muted list
-   - `sendNotification` is set based on the user's notification preference
+1. `usePrayerTimes` calls `calculateDaySchedule()` from `prayer-calculator.ts` for the current calendar day
+2. This creates an `adhan.PrayerTimes` object with coordinates, date, and calculation parameters, and a second one for tomorrow's Fajr
+3. The schedule holds the six times (five prayers and sunrise). `resolvePrayerState()` picks the current and next prayer from the clock, falls back to tomorrow's Fajr once Isha has passed, and skips times that are undefined near the polar circle
+4. `toSchedulerEntries()` builds a `PrayerTimeEntry` for each prayer that has a valid time, plus tomorrow's Fajr, applying user preferences:
+   - `hasAdhan` is `false` if adhan is globally disabled or this prayer is in the muted list
+   - `sendNotification` follows the notification preference
+   - sunrise is left out, so it never notifies or plays
 5. These entries are pushed to the Rust backend via `invoke('set_prayer_times', { times })`
-6. Times recalculate when: the date changes (midnight check every 60s), settings change, or the system wakes from sleep
+6. A single timer re-arms after every tick and fires at the next prayer, at midnight, or within a minute, whichever is first. The clock is also read again when the window becomes visible, so a laptop waking from sleep corrects itself within a minute
 
 ### Settings flow
 
@@ -101,13 +99,12 @@ src-tauri/src/
 └── commands/
     ├── mod.rs      Re-exports
     ├── audio.rs    play_adhan, stop_adhan, set_mute, get_mute
-    ├── prayer.rs   set_prayer_times
-    └── location.rs (empty - geolocation is frontend-only)
+    └── prayer.rs   set_prayer_times
 ```
 
 ### Audio architecture
 
-rodio's `OutputStream` is `!Send`, so it can't live in Tauri's managed state. Instead, `AudioHandle` spawns a dedicated OS thread that owns the output stream and sink. The main app talks to it through an `mpsc::Sender<AudioCommand>` channel, which is `Send`. If there's no audio device, the handle is `None` and audio is silently skipped.
+rodio's `OutputStream` is `!Send`, so it can't live in Tauri's managed state. Instead, `AudioHandle` spawns a dedicated OS thread that owns the output stream and sink. The main app talks to it through an `mpsc::Sender<AudioCommand>` channel, which is `Send`. The output device is opened on the first play and again after a failure, so a machine that had no audio device at login still plays once one appears. A failed open is skipped and the tray returns to its default icon.
 
 ### Tray icon states
 
@@ -116,7 +113,7 @@ The tray icon has three variants, embedded at compile time:
 | State | Icon | When |
 |-------|------|------|
 | Default | Gold star on navy | Normal operation |
-| Playing | Gold star + green dot | Adhan is playing (auto-reverts after 120s) |
+| Playing | Gold star + green dot | Adhan is playing; reverts when playback ends |
 | Muted | Dim star + red strike | User muted via button or tray menu |
 
 ### Scheduler
@@ -124,27 +121,28 @@ The tray icon has three variants, embedded at compile time:
 A tokio background task ticks every 5 seconds. On each tick, it:
 
 1. Locks the scheduler state and reads the prayer times
-2. Checks if any prayer time fell within the last 0-59 seconds
-3. If yes and it hasn't already been triggered:
+2. Looks for a prayer whose time fell within the last 0-59 seconds
+3. If one is due and has not already fired for that instant, marks it fired and:
    - Emits a `"prayer-time"` event to the frontend (always)
    - Sends a native OS notification (if `sendNotification` is `true` for that prayer)
    - Plays the adhan audio (if `hasAdhan` is `true` and the global mute is off)
 
-The frontend re-pushes times whenever they change (settings update, date change, wake from sleep), which resets the `last_triggered` flag.
+The frontend re-pushes times whenever they change (settings update, date change, wake from sleep). Fired prayers are remembered by name and instant for a day, so a re-push inside the trigger window cannot play the adhan twice.
 
 ## Adding a new calculation method
 
 1. Add the key to `CalculationMethodName` in `src/types/index.ts`
 2. Add metadata (display name, angles, region) to `CALCULATION_METHODS` in `src/lib/constants.ts`
 3. Add the constructor mapping to `METHOD_MAP` in `src/lib/prayer-calculator.ts`
-4. Optionally add country-code mappings to `COUNTRY_TO_METHOD` in `src/lib/constants.ts`
+4. Add expected times from an independent source to `src/lib/prayer-calculator.test.ts`
+5. Optionally add country-code mappings to `COUNTRY_TO_METHOD` in `src/lib/constants.ts`
 
 ## Adding a city
 
 Add an entry to the `CITIES` array in `src/lib/cities.ts`:
 
 ```typescript
-{ name: 'Auckland', country: 'New Zealand', countryCode: 'NZ', lat: -36.8485, lon: 174.7633, timezone: 'Pacific/Auckland' },
+{ name: 'Auckland', country: 'New Zealand', countryCode: 'NZ', lat: -36.8485, lon: 174.7633 },
 ```
 
 ## Adding an adhan recording
