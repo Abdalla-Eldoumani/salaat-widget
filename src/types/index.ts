@@ -8,11 +8,22 @@ export interface PrayerTime {
   hasAdhan: boolean; // false for sunrise
 }
 
-export interface PrayerTimeResult {
+// Times are Invalid Date when the sun or twilight geometry gives no answer
+// for the latitude and date (midnight sun, polar night).
+export interface DaySchedule {
   prayers: PrayerTime[];
+  // Fajr of the following day, for the countdown after Isha.
+  nextFajr: Date;
+}
+
+export interface PrayerState {
   currentPrayer: PrayerName | null;
   nextPrayer: PrayerName | null;
   nextPrayerTime: Date | null;
+}
+
+export interface PrayerTimeResult extends PrayerState {
+  prayers: PrayerTime[];
 }
 
 export type DockEdge = 'top' | 'bottom' | 'left' | 'right' | 'floating';
