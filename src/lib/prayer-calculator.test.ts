@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CalculationMethodName, DaySchedule, MadhabName, PrayerName } from '../types';
-import { calculateDaySchedule, resolvePrayerState, toSchedulerEntries } from './prayer-calculator';
+import { MAX_REFRESH_MS, calculateDaySchedule, msUntilRefresh, resolvePrayerState, toSchedulerEntries } from './prayer-calculator';
 
 // Expected values come from outside this codebase so they cannot repeat a mistake made in it:
 // - AlAdhan timetable (api.aladhan.com, v1 timings endpoint), fetched 2026-10-09. Method ids:
@@ -200,5 +200,27 @@ describe('latitudes with no sunrise or sunset', () => {
   it('has no next prayer after the last valid time when tomorrow has none either', () => {
     const state = resolvePrayerState(tromso, new Date(Date.UTC(2026, 5, 21, 20, 0)));
     expect(state).toEqual({ currentPrayer: 'asr', nextPrayer: null, nextPrayerTime: null });
+  });
+});
+
+describe('redraw timing', () => {
+  const schedule = calculateDaySchedule(MAKKAH.lat, MAKKAH.lon, localDate('2026-10-09'), 'ISNA', 'Shafi');
+  const asr = schedule.prayers.find((p) => p.name === 'asr')!.time.getTime();
+
+  it('fires just after a prayer that is closer than the cap', () => {
+    const delay = msUntilRefresh(schedule, new Date(asr - 10 * SECOND));
+    expect(delay).toBeGreaterThan(10 * SECOND);
+    expect(delay).toBeLessThan(11 * SECOND);
+  });
+
+  it('never waits longer than the cap, so a wake from sleep is corrected within it', () => {
+    expect(msUntilRefresh(schedule, new Date(asr - 3 * 60 * MINUTE))).toBe(MAX_REFRESH_MS);
+  });
+
+  it('skips prayers that have passed and prayers that do not exist', () => {
+    const tromso = calculateDaySchedule(69.6492, 18.9553, localDate('2026-06-21'), 'ISNA', 'Shafi');
+    const delay = msUntilRefresh(tromso, new Date(Date.UTC(2026, 5, 21, 20, 0)));
+    expect(delay).toBeGreaterThanOrEqual(250);
+    expect(delay).toBeLessThanOrEqual(MAX_REFRESH_MS);
   });
 });
