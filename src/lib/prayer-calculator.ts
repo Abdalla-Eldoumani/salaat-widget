@@ -144,14 +144,6 @@ export function toSchedulerEntries({ prayers, nextFajr }: DaySchedule, prefs: Sc
     }));
 }
 
-export function formatPrayerTime(date: Date, format: '12h' | '24h'): string {
-  return date.toLocaleTimeString('en-US', {
-    hour: format === '24h' ? '2-digit' : 'numeric',
-    minute: '2-digit',
-    hour12: format === '12h',
-  });
-}
-
 // Returns true if the time is NaN (happens at extreme latitudes when fajr/isha are undefined).
 export function isInvalidTime(date: Date): boolean {
   return isNaN(date.getTime());
