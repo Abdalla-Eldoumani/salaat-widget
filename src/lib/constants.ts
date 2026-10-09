@@ -60,7 +60,7 @@ export const CALCULATION_METHODS: Record<CalculationMethodName, {
   },
   MoonsightingCommittee: {
     displayName: 'Moonsighting Committee',
-    angles: 'Fajr 18°, Isha varies by season',
+    angles: 'Fajr and Isha vary with season and latitude',
     region: 'Worldwide (Moonsighting methodology)',
   },
   ISNA: {
@@ -75,7 +75,7 @@ export const CALCULATION_METHODS: Record<CalculationMethodName, {
   },
   Qatar: {
     displayName: 'Qatar',
-    angles: 'Modified Umm al-Qura',
+    angles: 'Fajr 18°, Isha 90min after Maghrib',
     region: 'Qatar',
   },
   Singapore: {
