@@ -6,6 +6,7 @@ import { useCountdown } from './hooks/useCountdown';
 import { useWindowDock, type Overlay } from './hooks/useWindowDock';
 import { useGeolocation } from './hooks/useGeolocation';
 import { useSettings } from './hooks/useSettings';
+import { locationUpdates } from './lib/location';
 import type { PrayerTimeEventPayload } from './types';
 import PrayerTimesBar from './components/PrayerTimesBar';
 import PrayerTimesSidebar from './components/PrayerTimesSidebar';
@@ -15,7 +16,8 @@ import Onboarding from './components/Onboarding';
 
 function App() {
   const { settings, loading, updateSetting } = useSettings();
-  const geo = useGeolocation(settings.autoDetectLocation);
+  // Onboarding shows a detected location even before the setting is saved.
+  const geo = useGeolocation(!loading && (settings.autoDetectLocation || !settings.onboardingComplete));
   const [settingsOpen, setSettingsOpen] = useState(false);
   const overlay: Overlay | null = !settings.onboardingComplete ? 'onboarding' : settingsOpen ? 'settings' : null;
   const { layout, onDragEnd } = useWindowDock({
@@ -28,9 +30,10 @@ function App() {
   });
   const [flashing, setFlashing] = useState(false);
 
-  // Use detected location if auto-detect is on, otherwise use stored settings
-  const latitude = settings.autoDetectLocation ? geo.location.latitude : settings.latitude;
-  const longitude = settings.autoDetectLocation ? geo.location.longitude : settings.longitude;
+  // The saved location is used until a real detection succeeds, and again if detection fails.
+  const detected = settings.autoDetectLocation ? geo.location : null;
+  const latitude = detected?.latitude ?? settings.latitude;
+  const longitude = detected?.longitude ?? settings.longitude;
 
   const prayerTimes = usePrayerTimes({
     latitude,
@@ -47,15 +50,17 @@ function App() {
   const rawCountdown = useCountdown(prayerTimes.nextPrayerTime);
   const countdown = settings.showCountdown ? rawCountdown : '';
 
-  // When geolocation detects a new location, persist it to settings
+  // Keep the last real detection for the next launch. Onboarding saves the first value itself.
+  const { onboardingComplete, latitude: savedLatitude, longitude: savedLongitude, locationName: savedName } = settings;
   useEffect(() => {
-    if (settings.autoDetectLocation && geo.location.city !== 'Unknown') {
-      updateSetting('latitude', geo.location.latitude);
-      updateSetting('longitude', geo.location.longitude);
-      updateSetting('timezone', geo.location.timezone);
-      updateSetting('locationName', `${geo.location.city}, ${geo.location.countryCode}`);
-    }
-  }, [geo.location, settings.autoDetectLocation, updateSetting]);
+    if (!onboardingComplete) return;
+    const changes = locationUpdates(detected, { latitude: savedLatitude, longitude: savedLongitude, locationName: savedName });
+    const saves: Promise<void>[] = [];
+    if (changes.latitude !== undefined) saves.push(updateSetting('latitude', changes.latitude));
+    if (changes.longitude !== undefined) saves.push(updateSetting('longitude', changes.longitude));
+    if (changes.locationName !== undefined) saves.push(updateSetting('locationName', changes.locationName));
+    Promise.all(saves).catch((err) => console.error('could not save the detected location', err));
+  }, [detected, onboardingComplete, savedLatitude, savedLongitude, savedName, updateSetting]);
 
   // Restore alwaysOnTop preference (config defaults to true, but user may have turned it off)
   useEffect(() => {
@@ -106,6 +111,7 @@ function App() {
         onUpdate={updateSetting}
         geoLocation={geo.location}
         geoDetecting={geo.detecting}
+        geoError={geo.error}
         onGeoDetect={geo.detect}
       />
     );
@@ -117,8 +123,9 @@ function App() {
         settings={settings}
         onUpdate={updateSetting}
         onClose={closeSettings}
-        geoLocation={settings.autoDetectLocation ? geo.location : null}
+        geoLocation={detected}
         geoDetecting={geo.detecting}
+        geoError={geo.error}
         onGeoDetect={geo.detect}
       />
     );

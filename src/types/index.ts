@@ -99,7 +99,6 @@ export interface LocationResult {
   city: string;
   country: string;
   countryCode: string;
-  timezone: string;
 }
 
 // Sent from the frontend to the Rust scheduler
