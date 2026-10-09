@@ -36,7 +36,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: pnpm
 
       - name: Install Rust stable
@@ -58,7 +58,7 @@ jobs:
             patchelf \
             libasound2-dev
 
-      - run: pnpm install
+      - run: pnpm install --frozen-lockfile
 
       - name: Build and publish release
         uses: tauri-apps/tauri-action@v0
@@ -68,13 +68,13 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: 'Salaat Widget ${{ github.ref_name }}'
           releaseBody: |
-            Download the installer for your platform below.
+            Download the installer for your platform below. None of them are code-signed.
 
-            **Windows** - Pick the NSIS `.exe` for the smallest download (auto-installs the WebView2 runtime). The MSI is for IT-managed installs. SmartScreen may warn on first run; click *More info* then *Run anyway*.
+            **Windows** - Pick `Salaat.Widget_<version>_x64-setup.exe` for the smallest download; it installs the WebView2 runtime if it is missing. The `.msi` is for managed installs. SmartScreen warns on first run: select *More info*, then *Run anyway*.
 
-            **macOS** - Open the `.dmg` and drag the app into Applications. On first launch right-click and choose *Open* to bypass Gatekeeper.
+            **macOS** - Apple Silicon only (`Salaat.Widget_<version>_aarch64.dmg`). Open the disk image and drag the app into Applications. On first launch right-click the app and choose *Open* to get past Gatekeeper.
 
-            **Linux** - Install the `.deb` with `sudo dpkg -i salaat-widget_*_amd64.deb`, or run the AppImage after `chmod +x`. GNOME users need the AppIndicator extension for the tray icon.
+            **Linux** - Install `Salaat.Widget_<version>_amd64.deb` with `sudo dpkg -i`, or run the `.AppImage` after `chmod +x`. GNOME users need the AppIndicator extension for the tray icon.
           releaseDraft: true
           prerelease: false
           args: --ci
