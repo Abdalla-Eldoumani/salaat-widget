@@ -34,8 +34,8 @@ export default function Switch({ checked, onChange, label, hint, disabled = fals
       >
         <span
           aria-hidden="true"
-          className={`absolute left-[3px] top-[3px] size-4 rounded-full transition-transform ${
-            checked ? 'translate-x-5 bg-on-gold' : 'bg-muted'
+          className={`absolute start-[3px] top-[3px] size-4 rounded-full transition-transform ${
+            checked ? 'translate-x-5 bg-on-gold rtl:-translate-x-5' : 'bg-muted'
           }`}
         />
       </button>
