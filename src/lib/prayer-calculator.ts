@@ -4,11 +4,9 @@ import {
   PrayerTimes,
   Madhab,
   HighLatitudeRule,
-  Qibla,
 } from 'adhan';
 import type {
   PrayerName,
-  PrayerTimeResult,
   PrayerTime,
   PrayerTimeEntry,
   PrayerState,
@@ -45,15 +43,6 @@ const HIGH_LAT_MAP: Record<HighLatitudeRuleName, (typeof HighLatitudeRule)[keyof
   SeventhOfTheNight: HighLatitudeRule.SeventhOfTheNight,
   TwilightAngle: HighLatitudeRule.TwilightAngle,
 };
-
-// adhan returns prayer names as lowercase strings. Map to our PrayerName type.
-function prayerToName(prayer: string): PrayerName | null {
-  const map: Record<string, PrayerName> = {
-    fajr: 'fajr', sunrise: 'sunrise', dhuhr: 'dhuhr',
-    asr: 'asr', maghrib: 'maghrib', isha: 'isha',
-  };
-  return map[prayer] ?? null;
-}
 
 function buildParams(method: CalculationMethodName, madhab: MadhabName, highLatRule: HighLatitudeRuleName) {
   const params = METHOD_MAP[method]();
@@ -105,35 +94,18 @@ export function resolvePrayerState({ prayers, nextFajr }: DaySchedule, now: Date
   return { currentPrayer, nextPrayer: null, nextPrayerTime: null };
 }
 
-export function calculatePrayerTimes(
-  latitude: number,
-  longitude: number,
-  date: Date,
-  method: CalculationMethodName,
-  madhab: MadhabName,
-  highLatRule: HighLatitudeRuleName = 'MiddleOfTheNight',
-): PrayerTimeResult {
-  const coordinates = new Coordinates(latitude, longitude);
-  const params = METHOD_MAP[method]();
-  params.madhab = MADHAB_MAP[madhab];
-  params.highLatitudeRule = HIGH_LAT_MAP[highLatRule];
+// The widget redraws when the clock crosses a prayer, tomorrow's Fajr or local midnight. The cap
+// also bounds how late a redraw can be after the machine sleeps, because timers do not count
+// the time asleep.
+export const MAX_REFRESH_MS = 60_000;
+const MIN_REFRESH_MS = 250;
+const SETTLE_MS = 50;
 
-  const pt = new PrayerTimes(coordinates, date, params);
-
-  const prayers: PrayerTime[] = [
-    makePrayerTime('fajr', pt.fajr),
-    makePrayerTime('sunrise', pt.sunrise),
-    makePrayerTime('dhuhr', pt.dhuhr),
-    makePrayerTime('asr', pt.asr),
-    makePrayerTime('maghrib', pt.maghrib),
-    makePrayerTime('isha', pt.isha),
-  ];
-
-  const current = prayerToName(pt.currentPrayer());
-  const next = prayerToName(pt.nextPrayer());
-  const nextTime = next ? pt.timeForPrayer(pt.nextPrayer()) : null;
-
-  return { prayers, currentPrayer: current, nextPrayer: next, nextPrayerTime: nextTime };
+export function msUntilRefresh({ prayers, nextFajr }: DaySchedule, now: Date): number {
+  const t = now.getTime();
+  const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime();
+  const next = Math.min(midnight, ...[nextFajr, ...prayers.map((p) => p.time)].map((d) => d.getTime()).filter((ms) => ms > t));
+  return Math.min(Math.max(next - t + SETTLE_MS, MIN_REFRESH_MS), MAX_REFRESH_MS);
 }
 
 function makePrayerTime(name: PrayerName, time: Date): PrayerTime {
@@ -183,8 +155,4 @@ export function formatPrayerTime(date: Date, format: '12h' | '24h'): string {
 // Returns true if the time is NaN (happens at extreme latitudes when fajr/isha are undefined).
 export function isInvalidTime(date: Date): boolean {
   return isNaN(date.getTime());
-}
-
-export function getQiblaDirection(latitude: number, longitude: number): number {
-  return Qibla(new Coordinates(latitude, longitude));
 }

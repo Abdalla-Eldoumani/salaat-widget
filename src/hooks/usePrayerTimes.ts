@@ -1,8 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import type { PrayerTimeResult, PrayerTimeEntry, PrayerName, CalculationMethodName, MadhabName, HighLatitudeRuleName } from '../types';
-import { calculatePrayerTimes } from '../lib/prayer-calculator';
-import { DATE_CHECK_INTERVAL_MS } from '../lib/constants';
+import type { PrayerTimeResult, PrayerName, CalculationMethodName, MadhabName, HighLatitudeRuleName } from '../types';
+import { calculateDaySchedule, msUntilRefresh, resolvePrayerState, toSchedulerEntries } from '../lib/prayer-calculator';
 
 interface UsePrayerTimesOptions {
   latitude: number;
@@ -19,61 +18,43 @@ interface UsePrayerTimesOptions {
 export function usePrayerTimes(options: UsePrayerTimesOptions): PrayerTimeResult {
   const { latitude, longitude, method, madhab, highLatitudeRule, adhanEnabled, adhanReciter, mutedPrayers, notificationsEnabled } = options;
 
-  // Track the current date (year/month/day) so we recalculate at midnight
-  const [today, setToday] = useState(() => new Date());
+  const [now, setNow] = useState(() => new Date());
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const date = now.getDate();
 
-  // Bump to force recalculation on wake from sleep
-  const [wakeTick, setWakeTick] = useState(0);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const now = new Date();
-      // Only update if the date actually changed
-      setToday((prev) => {
-        if (
-          prev.getFullYear() !== now.getFullYear() ||
-          prev.getMonth() !== now.getMonth() ||
-          prev.getDate() !== now.getDate()
-        ) {
-          return now;
-        }
-        return prev;
-      });
-    }, DATE_CHECK_INTERVAL_MS);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  // Recalculate when the page becomes visible (after sleep/wake)
-  useEffect(() => {
-    function onVisibilityChange() {
-      if (document.visibilityState === 'visible') {
-        setWakeTick((t) => t + 1);
-        // Also check date in case we slept past midnight
-        setToday(new Date());
-      }
-    }
-    document.addEventListener('visibilitychange', onVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
-  }, []);
-
-  const result = useMemo(
-    () => calculatePrayerTimes(latitude, longitude, today, method, madhab, highLatitudeRule),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [latitude, longitude, today, method, madhab, highLatitudeRule, wakeTick],
+  // Keyed on the calendar day, not on `now`, so crossing a prayer does not recompute the day.
+  const schedule = useMemo(
+    () => calculateDaySchedule(latitude, longitude, new Date(year, month, date), method, madhab, highLatitudeRule),
+    [latitude, longitude, year, month, date, method, madhab, highLatitudeRule],
   );
 
-  // Push prayer times to the Rust scheduler whenever they change
-  useEffect(() => {
-    const entries: PrayerTimeEntry[] = result.prayers.map((p) => ({
-      name: p.name,
-      time: p.time.toISOString(),
-      hasAdhan: adhanEnabled && p.hasAdhan && !mutedPrayers.includes(p.name),
-      sendNotification: notificationsEnabled,
-      reciter: adhanReciter,
-    }));
-    invoke('set_prayer_times', { times: entries }).catch(() => {});
-  }, [result, adhanEnabled, adhanReciter, mutedPrayers, notificationsEnabled]);
+  const state = useMemo(() => resolvePrayerState(schedule, now), [schedule, now]);
 
-  return result;
+  // One timer, re-armed after every tick: it fires at the next prayer or midnight, and at
+  // least once a minute so a wake from sleep is corrected within that minute.
+  useEffect(() => {
+    const timer = setTimeout(() => setNow(new Date()), msUntilRefresh(schedule, now));
+    return () => clearTimeout(timer);
+  }, [schedule, now]);
+
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState === 'visible') setNow(new Date());
+    }
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
+
+  useEffect(() => {
+    const entries = toSchedulerEntries(schedule, {
+      adhanEnabled,
+      mutedPrayers,
+      notificationsEnabled,
+      reciter: adhanReciter,
+    });
+    invoke('set_prayer_times', { times: entries }).catch((err) => console.error('set_prayer_times failed', err));
+  }, [schedule, adhanEnabled, adhanReciter, mutedPrayers, notificationsEnabled]);
+
+  return useMemo(() => ({ prayers: schedule.prayers, ...state }), [schedule, state]);
 }

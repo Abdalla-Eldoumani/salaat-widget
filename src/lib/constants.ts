@@ -148,8 +148,5 @@ export const WIDGET_DIMENSIONS = {
 // How close (logical pixels) the window must be to an edge before snapping.
 export const SNAP_THRESHOLD_PX = 40;
 
-// How often (ms) the frontend checks if the date has changed (for midnight rollover).
-export const DATE_CHECK_INTERVAL_MS = 60_000;
-
 // How often (ms) the countdown display updates.
 export const COUNTDOWN_TICK_MS = 1_000;
