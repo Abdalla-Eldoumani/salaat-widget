@@ -30,20 +30,15 @@ pub fn run() {
             let _ = app.state::<AppState>().audio.set(audio::AudioHandle::spawn(app.handle().clone()));
             tray::create_tray(app.handle())?;
 
-            // Register Ctrl+Shift+P to toggle widget visibility
+            // A hotkey another program already holds must not stop the widget from starting.
             let handle = app.handle().clone();
-            app.global_shortcut().on_shortcut("ctrl+shift+p", move |_app, _shortcut, event| {
+            if let Err(e) = app.global_shortcut().on_shortcut("ctrl+shift+p", move |_app, _shortcut, event| {
                 if event.state == ShortcutState::Pressed {
-                    if let Some(window) = handle.get_webview_window("main") {
-                        if window.is_visible().unwrap_or(false) {
-                            let _ = window.hide();
-                        } else {
-                            let _ = window.show();
-                            let _ = window.set_focus();
-                        }
-                    }
+                    tray::toggle_window_visibility(&handle);
                 }
-            })?;
+            }) {
+                eprintln!("could not register ctrl+shift+p: {e}");
+            }
 
             // Start the prayer time scheduler
             scheduler::start_scheduler(app.handle().clone());
