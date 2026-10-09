@@ -10,6 +10,7 @@ import type {
 } from '../types';
 import { CALCULATION_METHODS, PRAYER_NAMES, RECITERS } from '../lib/constants';
 import { CITIES } from '../lib/cities';
+import { formatLocationName } from '../lib/location';
 import Switch from './Switch';
 import MuteButton from './MuteButton';
 
@@ -19,6 +20,7 @@ interface SettingsPanelProps {
   onClose: () => void;
   geoLocation: LocationResult | null;
   geoDetecting: boolean;
+  geoError?: string | null;
   onGeoDetect: () => Promise<void>;
 }
 
@@ -28,6 +30,7 @@ export default function SettingsPanel({
   onClose,
   geoLocation,
   geoDetecting,
+  geoError,
   onGeoDetect,
 }: SettingsPanelProps) {
   return (
@@ -59,17 +62,24 @@ export default function SettingsPanel({
             onChange={(v) => onUpdate('autoDetectLocation', v)}
           />
           {settings.autoDetectLocation ? (
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-[#7B89A1]">
-                {geoDetecting ? 'Detecting...' : geoLocation ? `${geoLocation.city}, ${geoLocation.countryCode}` : settings.locationName}
-              </span>
-              <button
-                onClick={onGeoDetect}
-                disabled={geoDetecting}
-                className="text-[10px] text-[#C8A84E] hover:text-[#E8E2D6] disabled:text-[#4A5568]"
-              >
-                Refresh
-              </button>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-[#7B89A1]">
+                  {geoDetecting ? 'Detecting...' : geoLocation ? formatLocationName(geoLocation) : settings.locationName}
+                </span>
+                <button
+                  onClick={onGeoDetect}
+                  disabled={geoDetecting}
+                  className="text-[10px] text-[#C8A84E] hover:text-[#E8E2D6] disabled:text-[#4A5568]"
+                >
+                  Refresh
+                </button>
+              </div>
+              {geoError && !geoDetecting && (
+                <p className="text-[10px] text-[#E8E2D6]" role="status">
+                  Could not detect your location ({geoError}). Prayer times use the last saved location, {settings.locationName}.
+                </p>
+              )}
             </div>
           ) : (
             <CityPicker
@@ -77,7 +87,6 @@ export default function SettingsPanel({
               onSelect={(city) => {
                 onUpdate('latitude', city.lat);
                 onUpdate('longitude', city.lon);
-                onUpdate('timezone', city.timezone);
                 onUpdate('locationName', `${city.name}, ${city.countryCode}`);
               }}
             />
@@ -268,7 +277,7 @@ function Select<T extends string>({
 
 function CityPicker({ value, onSelect }: {
   value: string;
-  onSelect: (city: { name: string; countryCode: string; lat: number; lon: number; timezone: string }) => void;
+  onSelect: (city: { name: string; countryCode: string; lat: number; lon: number }) => void;
 }) {
   const isKnownCity = CITIES.some((c) => `${c.name}, ${c.countryCode}` === value);
 
