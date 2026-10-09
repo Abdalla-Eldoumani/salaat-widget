@@ -1,18 +1,28 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { MouseEvent } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import { Window } from '@tauri-apps/api/window';
 import { usePrayerTimes } from './hooks/usePrayerTimes';
-import { useCountdown } from './hooks/useCountdown';
 import { useWindowDock, type Overlay } from './hooks/useWindowDock';
 import { useGeolocation } from './hooks/useGeolocation';
 import { useSettings } from './hooks/useSettings';
+import { PRAYER_NAMES } from './lib/constants';
 import { locationUpdates } from './lib/location';
 import type { PrayerTimeEventPayload } from './types';
-import PrayerTimesBar from './components/PrayerTimesBar';
-import PrayerTimesSidebar from './components/PrayerTimesSidebar';
-import PrayerTimesCompact from './components/PrayerTimesCompact';
-import SettingsPanel from './components/SettingsPanel';
-import Onboarding from './components/Onboarding';
+import Page from './components/Page';
+import Widget from './components/widget/Widget';
+import SettingsPanel from './components/settings/SettingsPanel';
+import Onboarding from './components/onboarding/Onboarding';
+
+// How long the frame stays lit after a prayer time arrives.
+const ARRIVAL_MS = 10_000;
+// Controls keep their own clicks; everything else on the card drags the window.
+const INTERACTIVE = 'button, a, input, select, textarea, label, [role="switch"], [role="radio"]';
+
+function startDrag(event: MouseEvent<HTMLElement>) {
+  if (event.button !== 0 || (event.target as Element).closest(INTERACTIVE)) return;
+  Window.getCurrent().startDragging().catch((err) => console.error('could not start dragging', err));
+}
 
 function App() {
   const { settings, loading, updateSetting } = useSettings();
@@ -20,7 +30,7 @@ function App() {
   const geo = useGeolocation(!loading && (settings.autoDetectLocation || !settings.onboardingComplete));
   const [settingsOpen, setSettingsOpen] = useState(false);
   const overlay: Overlay | null = !settings.onboardingComplete ? 'onboarding' : settingsOpen ? 'settings' : null;
-  const { layout, onDragEnd } = useWindowDock({
+  const { layout } = useWindowDock({
     enabled: !loading,
     savedEdge: settings.dockEdge,
     overlay,
@@ -28,7 +38,7 @@ function App() {
       updateSetting('dockEdge', edge).catch((err) => console.error('could not save dock edge', err));
     },
   });
-  const [flashing, setFlashing] = useState(false);
+  const [arrived, setArrived] = useState<string | null>(null);
 
   // The saved location is used until a real detection succeeds, and again if detection fails.
   const detected = settings.autoDetectLocation ? geo.location : null;
@@ -46,9 +56,6 @@ function App() {
     mutedPrayers: settings.mutedPrayers,
     notificationsEnabled: settings.notificationsEnabled,
   });
-
-  const rawCountdown = useCountdown(prayerTimes.nextPrayerTime);
-  const countdown = settings.showCountdown ? rawCountdown : '';
 
   // Keep the last real detection for the next launch. Onboarding saves the first value itself.
   const { onboardingComplete, latitude: savedLatitude, longitude: savedLongitude, locationName: savedName } = settings;
@@ -69,30 +76,26 @@ function App() {
     }
   }, [loading, settings.alwaysOnTop]);
 
-  // Show the widget and flash when a prayer time arrives
+  // Show the widget and light the frame when a prayer time arrives. The window does not take
+  // focus: the time can come while the user is typing somewhere else.
   useEffect(() => {
-    const unlisten = listen<PrayerTimeEventPayload>('prayer-time', () => {
-      const appWindow = Window.getCurrent();
-      appWindow.show().catch(() => {});
-      appWindow.setFocus().catch(() => {});
-      appWindow.requestUserAttention(1).catch(() => {});
-      setFlashing(true);
+    const unlisten = listen<PrayerTimeEventPayload>('prayer-time', (event) => {
+      Window.getCurrent().show().catch(() => {});
+      setArrived(PRAYER_NAMES[event.payload.prayer]?.english ?? '');
     });
     return () => {
       unlisten.then((fn) => fn());
     };
   }, []);
 
-  // Auto-clear flash after animation completes (10 seconds)
   useEffect(() => {
-    if (!flashing) return;
-    const timer = setTimeout(() => setFlashing(false), 10_000);
+    if (arrived === null) return;
+    const timer = setTimeout(() => setArrived(null), ARRIVAL_MS);
     return () => clearTimeout(timer);
-  }, [flashing]);
+  }, [arrived]);
 
   const closeSettings = useCallback(() => setSettingsOpen(false), []);
 
-  // Escape key closes settings
   useEffect(() => {
     if (!settingsOpen) return;
     function onKeyDown(e: KeyboardEvent) {
@@ -102,65 +105,66 @@ function App() {
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [settingsOpen, closeSettings]);
 
+  // Closing settings puts keyboard focus back on the button that opened them.
+  const settingsWasOpen = useRef(false);
+  useEffect(() => {
+    if (settingsOpen) {
+      settingsWasOpen.current = true;
+    } else if (settingsWasOpen.current) {
+      settingsWasOpen.current = false;
+      document.querySelector<HTMLElement>('[data-settings-trigger]')?.focus();
+    }
+  }, [settingsOpen]);
+
   if (loading) return null;
 
+  let screen;
   if (!settings.onboardingComplete) {
-    return (
-      <Onboarding
-        settings={settings}
-        onUpdate={updateSetting}
-        geoLocation={geo.location}
-        geoDetecting={geo.detecting}
-        geoError={geo.error}
-        onGeoDetect={geo.detect}
-      />
+    screen = (
+      <Page>
+        <Onboarding
+          settings={settings}
+          onUpdate={updateSetting}
+          geoLocation={geo.location}
+          geoDetecting={geo.detecting}
+          geoError={geo.error}
+          onGeoDetect={geo.detect}
+        />
+      </Page>
     );
-  }
-
-  if (settingsOpen) {
-    return (
-      <SettingsPanel
-        settings={settings}
-        onUpdate={updateSetting}
-        onClose={closeSettings}
-        geoLocation={detected}
-        geoDetecting={geo.detecting}
-        geoError={geo.error}
-        onGeoDetect={geo.detect}
-      />
+  } else if (settingsOpen) {
+    screen = (
+      <Page>
+        <SettingsPanel
+          settings={settings}
+          onUpdate={updateSetting}
+          onClose={closeSettings}
+          geoLocation={detected}
+          geoDetecting={geo.detecting}
+          geoError={geo.error}
+          onGeoDetect={geo.detect}
+        />
+      </Page>
+    );
+  } else {
+    screen = (
+      <Page arriving={arrived !== null} onMouseDown={startDrag}>
+        <Widget
+          layout={layout}
+          prayerTimes={prayerTimes}
+          showCountdown={settings.showCountdown}
+          timeFormat={settings.timeFormat}
+          onSettingsOpen={() => setSettingsOpen(true)}
+        />
+      </Page>
     );
   }
 
   return (
-    <div className={`h-full w-full bg-[rgba(15,23,42,0.88)] backdrop-blur-xl border border-[rgba(200,168,78,0.06)] rounded-lg shadow-[0_2px_12px_rgba(0,0,0,0.3)] khatam-pattern${flashing ? ' animate-prayer-flash' : ''}`}>
-      {layout === 'horizontal' && (
-        <PrayerTimesBar
-          prayerTimes={prayerTimes}
-          countdown={countdown}
-          timeFormat={settings.timeFormat}
-          onDragEnd={onDragEnd}
-          onSettingsOpen={() => setSettingsOpen(true)}
-        />
-      )}
-      {layout === 'vertical' && (
-        <PrayerTimesSidebar
-          prayerTimes={prayerTimes}
-          countdown={countdown}
-          timeFormat={settings.timeFormat}
-          onDragEnd={onDragEnd}
-          onSettingsOpen={() => setSettingsOpen(true)}
-        />
-      )}
-      {layout === 'compact' && (
-        <PrayerTimesCompact
-          prayerTimes={prayerTimes}
-          countdown={countdown}
-          timeFormat={settings.timeFormat}
-          onDragEnd={onDragEnd}
-          onSettingsOpen={() => setSettingsOpen(true)}
-        />
-      )}
-    </div>
+    <>
+      <div role="status" className="sr-only">{arrived ? `Time for ${arrived}` : ''}</div>
+      {screen}
+    </>
   );
 }
 
