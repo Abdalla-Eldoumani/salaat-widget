@@ -5,6 +5,7 @@ use tauri::{
     AppHandle, Manager,
 };
 
+use crate::commands::audio::apply_mute;
 use crate::state::{AppState, TrayState};
 
 const SHOW_HIDE_ID: &str = "show_hide";
@@ -86,7 +87,7 @@ fn handle_menu_event(app: &AppHandle, id: &str) {
     }
 }
 
-fn toggle_window_visibility(app: &AppHandle) {
+pub fn toggle_window_visibility(app: &AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
         if window.is_visible().unwrap_or(false) {
             let _ = window.hide();
@@ -98,16 +99,8 @@ fn toggle_window_visibility(app: &AppHandle) {
 }
 
 fn toggle_mute(app: &AppHandle) {
-    let state = app.state::<AppState>();
-    let new_muted;
-    {
-        let mut muted = state.muted.lock().unwrap();
-        *muted = !*muted;
-        new_muted = *muted;
+    let muted = *app.state::<AppState>().muted.lock().unwrap();
+    if let Err(e) = apply_mute(app, !muted) {
+        eprintln!("mute from tray failed: {e}");
     }
-
-    // Update tray icon to reflect mute state
-    let new_tray = if new_muted { TrayState::Muted } else { TrayState::Default };
-    *state.tray_state.lock().unwrap() = new_tray;
-    update_tray_icon(app, new_tray);
 }
