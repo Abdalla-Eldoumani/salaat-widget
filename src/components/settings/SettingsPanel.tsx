@@ -30,7 +30,7 @@ export default function SettingsPanel({ settings, onUpdate, onClose, geoLocation
     <main aria-labelledby={titleId} className="flex h-full flex-col">
       <header className="space-y-1 px-6 pt-4">
         <div className="flex items-center justify-between">
-          <h1 id={titleId} ref={titleRef} tabIndex={-1} className="font-display text-2xl font-bold text-ink outline-none">
+          <h1 id={titleId} ref={titleRef} tabIndex={-1} className="font-display text-2xl font-bold text-ink">
             Settings
           </h1>
           <IconButton label="Close settings" onClick={onClose}>
