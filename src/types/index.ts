@@ -91,6 +91,17 @@ export interface SalaatSettings {
   onboardingStep: number;
 }
 
+export type UpdateSetting = <K extends keyof SalaatSettings>(key: K, value: SalaatSettings[K]) => Promise<void>;
+
+// What every dock layout draws from.
+export interface WidgetViewProps {
+  prayerTimes: PrayerTimeResult;
+  countdown: string;
+  showCountdown: boolean;
+  timeFormat: '12h' | '24h';
+  onSettingsOpen: () => void;
+}
+
 export interface LocationResult {
   latitude: number;
   longitude: number;
