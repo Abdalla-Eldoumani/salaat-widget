@@ -46,6 +46,20 @@ export function getSnapPosition(
   }
 }
 
+// Moves a window of the given size the shortest distance that puts it fully inside the monitor.
+export function clampToMonitor(
+  pos: { x: number; y: number },
+  size: { width: number; height: number },
+  monitor: MonitorBounds,
+): { x: number; y: number } {
+  const maxX = monitor.x + Math.max(0, monitor.width - size.width);
+  const maxY = monitor.y + Math.max(0, monitor.height - size.height);
+  return {
+    x: Math.min(Math.max(pos.x, monitor.x), maxX),
+    y: Math.min(Math.max(pos.y, monitor.y), maxY),
+  };
+}
+
 export function getLayoutForEdge(edge: DockEdge): WidgetLayout {
   if (edge === 'top' || edge === 'bottom') return 'horizontal';
   if (edge === 'left' || edge === 'right') return 'vertical';
