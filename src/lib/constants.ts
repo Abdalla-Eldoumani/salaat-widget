@@ -3,8 +3,7 @@ import type { SalaatSettings, CalculationMethodName, PrayerName } from '../types
 export const DEFAULT_SETTINGS: SalaatSettings = {
   latitude: 51.0447,
   longitude: -114.0719,
-  timezone: 'America/Edmonton',
-  locationName: 'Calgary, AB',
+  locationName: 'Calgary, CA',
   autoDetectLocation: true,
 
   calculationMethod: 'ISNA',
@@ -19,7 +18,6 @@ export const DEFAULT_SETTINGS: SalaatSettings = {
   dockEdge: 'top',
   alwaysOnTop: true,
   autostart: false,
-  theme: 'dark',
 
   timeFormat: '12h',
   showCountdown: true,

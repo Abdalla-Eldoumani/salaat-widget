@@ -68,7 +68,6 @@ export type HighLatitudeRuleName =
 export interface SalaatSettings {
   latitude: number;
   longitude: number;
-  timezone: string;
   locationName: string;
   autoDetectLocation: boolean;
 
@@ -84,7 +83,6 @@ export interface SalaatSettings {
   dockEdge: DockEdge;
   alwaysOnTop: boolean;
   autostart: boolean;
-  theme: 'light' | 'dark' | 'system';
 
   timeFormat: '12h' | '24h';
   showCountdown: boolean;
