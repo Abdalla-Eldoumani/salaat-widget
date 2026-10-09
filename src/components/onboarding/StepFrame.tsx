@@ -37,7 +37,7 @@ export default function StepFrame({
     <main aria-labelledby={titleId} className="flex h-full flex-col px-8 pb-5 pt-7">
       <header className="space-y-2">
         <p className="text-xs text-faint">Step {step} of {total}</p>
-        <h1 id={titleId} ref={titleRef} tabIndex={-1} className="font-display text-2xl font-bold text-ink outline-none">
+        <h1 id={titleId} ref={titleRef} tabIndex={-1} className="font-display text-2xl font-bold text-ink">
           {title}
         </h1>
         <Rule />
