@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { formatLocationName, locationUpdates, parseLocationResponse } from './location';
+import { CALCULATION_METHODS } from './constants';
+import { CITIES } from './cities';
+import { formatLocationName, locationUpdates, parseLocationResponse, suggestMethod } from './location';
 
 describe('formatLocationName', () => {
   it('joins city and country code', () => {
@@ -86,5 +88,32 @@ describe('locationUpdates', () => {
   it('writes only the fields that changed', () => {
     const moved = { latitude: 48.1374, longitude: 11.5755, city: 'Munich', country: 'Germany', countryCode: 'DE' };
     expect(locationUpdates(moved, saved)).toEqual({ latitude: 48.1374, longitude: 11.5755, locationName: 'Munich, DE' });
+  });
+});
+
+describe('suggestMethod', () => {
+  it('keeps the regional method for the countries that have one', () => {
+    expect(suggestMethod('CA')).toBe('ISNA');
+    expect(suggestMethod('US')).toBe('ISNA');
+    expect(suggestMethod('SA')).toBe('UmmAlQura');
+    expect(suggestMethod('TR')).toBe('Turkey');
+  });
+
+  it('gives the Muslim World League to a country without one, outside North America too', () => {
+    for (const code of ['GB', 'FR', 'DE', 'ID', 'MA', 'AU', 'NG']) expect(suggestMethod(code)).toBe('MuslimWorldLeague');
+  });
+
+  it('suggests nothing when the country is unknown', () => {
+    expect(suggestMethod(undefined)).toBeUndefined();
+    expect(suggestMethod('')).toBeUndefined();
+  });
+
+  it('gives every listed city a method the app offers', () => {
+    for (const city of CITIES) {
+      const method = suggestMethod(city.countryCode);
+      expect(method && method in CALCULATION_METHODS, city.name).toBe(true);
+    }
+    const london = CITIES.find((c) => c.name === 'London');
+    expect(london && suggestMethod(london.countryCode)).toBe('MuslimWorldLeague');
   });
 });
