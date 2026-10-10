@@ -1,5 +1,5 @@
 import type { CalculationMethodName, HighLatitudeRuleName, MadhabName } from '../../types';
-import { CALCULATION_METHODS } from '../../lib/constants';
+import { CALCULATION_METHODS, HIGH_LATITUDE_RULES } from '../../lib/constants';
 import Choice from '../ui/Choice';
 import SelectField from '../ui/SelectField';
 
@@ -64,10 +64,11 @@ export default function MethodStep({
             label="High latitude rule"
             value={highLatitudeRule}
             onChange={(next) => setHighLatitudeRule(next as HighLatitudeRuleName)}
+            hint="Automatic uses the seventh of the night at this latitude."
           >
-            <option value="MiddleOfTheNight">Middle of the night</option>
-            <option value="SeventhOfTheNight">Seventh of the night</option>
-            <option value="TwilightAngle">Twilight angle</option>
+            {HIGH_LATITUDE_RULES.map(({ value, label }) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
           </SelectField>
         </div>
       )}
