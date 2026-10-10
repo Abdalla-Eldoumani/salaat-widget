@@ -8,9 +8,9 @@ import type {
   SalaatSettings,
   UpdateSetting,
 } from '../../types';
-import { COUNTRY_TO_METHOD, HIGH_LATITUDE } from '../../lib/constants';
+import { HIGH_LATITUDE } from '../../lib/constants';
 import { CITIES } from '../../lib/cities';
-import { formatLocationName } from '../../lib/location';
+import { formatLocationName, suggestMethod } from '../../lib/location';
 import { cityLabel } from '../ui/CityPicker';
 import LocationStep from './LocationStep';
 import MethodStep from './MethodStep';
@@ -41,7 +41,7 @@ export default function Onboarding({ settings, onUpdate, geoLocation, geoDetecti
 
   // The country suggests a method until the user picks one.
   const [pickedMethod, setPickedMethod] = useState<CalculationMethodName | null>(null);
-  const suggestedMethod = country ? COUNTRY_TO_METHOD[country] : undefined;
+  const suggestedMethod = suggestMethod(country);
   const method = pickedMethod ?? suggestedMethod ?? settings.calculationMethod;
   const [madhab, setMadhab] = useState<MadhabName>(settings.madhab);
   const [highLatitudeRule, setHighLatitudeRule] = useState<HighLatitudeRuleName>(settings.highLatitudeRule);
