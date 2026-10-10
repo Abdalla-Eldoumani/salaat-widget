@@ -1,5 +1,5 @@
 import type { CalculationMethodName, HighLatitudeRuleName, MadhabName, SalaatSettings, UpdateSetting } from '../../types';
-import { CALCULATION_METHODS } from '../../lib/constants';
+import { CALCULATION_METHODS, HIGH_LATITUDE_RULES } from '../../lib/constants';
 import Choice from '../ui/Choice';
 import Section from '../ui/Section';
 import SelectField from '../ui/SelectField';
@@ -54,11 +54,11 @@ export default function CalculationSection({ settings, onUpdate }: CalculationSe
         label="High latitude rule"
         value={settings.highLatitudeRule}
         onChange={(next) => onUpdate('highLatitudeRule', next as HighLatitudeRuleName)}
-        hint="Places Fajr and Isha where twilight is very long or never ends, mostly above 48° latitude."
+        hint="Places Fajr and Isha where twilight is very long or never ends. Automatic uses the seventh of the night above 48° latitude and the middle of the night elsewhere."
       >
-        <option value="MiddleOfTheNight">Middle of the night</option>
-        <option value="SeventhOfTheNight">Seventh of the night</option>
-        <option value="TwilightAngle">Twilight angle</option>
+        {HIGH_LATITUDE_RULES.map(({ value, label }) => (
+          <option key={value} value={value}>{label}</option>
+        ))}
       </SelectField>
     </Section>
   );
