@@ -25,7 +25,10 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "esbuild"
-    ]
+    ],
+    "patchedDependencies": {
+      "adhan@4.4.6": "patches/adhan@4.4.6.patch"
+    }
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

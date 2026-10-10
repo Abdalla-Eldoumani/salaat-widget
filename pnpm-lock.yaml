@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  adhan@4.4.6:
+    hash: d420cfe4921eda8f133849d2c1f2d6e27963517c7b31318b99e4c02fccf1e0bf
+    path: patches/adhan@4.4.6.patch
+
 importers:
 
   .:
@@ -25,7 +30,7 @@ importers:
         version: 2.5.0
       adhan:
         specifier: 4.4.6
-        version: 4.4.6
+        version: 4.4.6(patch_hash=d420cfe4921eda8f133849d2c1f2d6e27963517c7b31318b99e4c02fccf1e0bf)
       react:
         specifier: 18.3.1
         version: 18.3.1
@@ -2181,7 +2186,7 @@ snapshots:
 
   acorn@8.19.0: {}
 
-  adhan@4.4.6: {}
+  adhan@4.4.6(patch_hash=d420cfe4921eda8f133849d2c1f2d6e27963517c7b31318b99e4c02fccf1e0bf): {}
 
   ajv@6.15.0:
     dependencies:

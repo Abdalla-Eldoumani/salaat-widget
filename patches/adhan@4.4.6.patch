@@ -1,0 +1,60 @@
+diff --git a/lib/cjs/SolarTime.js b/lib/cjs/SolarTime.js
+index 53c52f4779f44b655b5db2f68157d3984825d23a..6a919a4e405a93d8c114ff9204c64137607ece43 100644
+--- a/lib/cjs/SolarTime.js
++++ b/lib/cjs/SolarTime.js
+@@ -37,11 +37,22 @@ var SolarTime = exports["default"] = /*#__PURE__*/function () {
+   }, {
+     key: "afternoon",
+     value: function afternoon(shadowLength) {
++      var _this = this;
+       // TODO source shadow angle calculation
+-      var tangent = Math.abs(this.observer.latitude - this.solar.declination);
+-      var inverse = shadowLength + Math.tan((0, _MathUtils.degreesToRadians)(tangent));
+-      var angle = (0, _MathUtils.radiansToDegrees)(Math.atan(1.0 / inverse));
+-      return this.hourAngle(angle, true);
++      var angleFor = function angleFor(declination) {
++        var tangent = Math.abs(_this.observer.latitude - declination);
++        var inverse = shadowLength + Math.tan((0, _MathUtils.degreesToRadians)(tangent));
++        return (0, _MathUtils.radiansToDegrees)(Math.atan(1.0 / inverse));
++      };
++      // The shadow length depends on the Sun's declination at the time of Asr, which can be a day
++      // after 0h UT in the western hemisphere and puts Asr up to 95 s off. Solve once with the
++      // declination at 0h UT, then again with the declination at that first answer.
++      var estimate = this.hourAngle(angleFor(this.solar.declination), true);
++      var declination = _Astronomical["default"].interpolate(this.solar.declination, this.prevSolar.declination, this.nextSolar.declination, estimate / 24);
++      var refined = this.hourAngle(angleFor(declination), true);
++      // Where the Sun only just reaches the Asr altitude (winter, above about 60 degrees) the second
++      // solve can find no answer, and the first one is kept.
++      return isNaN(refined) ? estimate : refined;
+     }
+   }]);
+ }();
+diff --git a/lib/esm/SolarTime.js b/lib/esm/SolarTime.js
+index 2357cab5d19dc04383f922780a5148de3c5a5043..0e13b00f72c86ea9e9f700d941220661f1b804e0 100644
+--- a/lib/esm/SolarTime.js
++++ b/lib/esm/SolarTime.js
+@@ -20,10 +20,20 @@ export default class SolarTime {
+   }
+   afternoon(shadowLength) {
+     // TODO source shadow angle calculation
+-    const tangent = Math.abs(this.observer.latitude - this.solar.declination);
+-    const inverse = shadowLength + Math.tan(degreesToRadians(tangent));
+-    const angle = radiansToDegrees(Math.atan(1.0 / inverse));
+-    return this.hourAngle(angle, true);
++    const angleFor = declination => {
++      const tangent = Math.abs(this.observer.latitude - declination);
++      const inverse = shadowLength + Math.tan(degreesToRadians(tangent));
++      return radiansToDegrees(Math.atan(1.0 / inverse));
++    };
++    // The shadow length depends on the Sun's declination at the time of Asr, which can be a day
++    // after 0h UT in the western hemisphere and puts Asr up to 95 s off. Solve once with the
++    // declination at 0h UT, then again with the declination at that first answer.
++    const estimate = this.hourAngle(angleFor(this.solar.declination), true);
++    const declination = Astronomical.interpolate(this.solar.declination, this.prevSolar.declination, this.nextSolar.declination, estimate / 24);
++    const refined = this.hourAngle(angleFor(declination), true);
++    // Where the Sun only just reaches the Asr altitude (winter, above about 60 degrees) the second
++    // solve can find no answer, and the first one is kept.
++    return isNaN(refined) ? estimate : refined;
+   }
+ }
+ //# sourceMappingURL=SolarTime.js.map
