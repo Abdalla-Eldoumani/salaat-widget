@@ -1,10 +1,18 @@
-import type { LocationResult, SalaatSettings } from '../types';
+import type { CalculationMethodName, LocationResult, SalaatSettings } from '../types';
+import { COUNTRY_TO_METHOD } from './constants';
 
 // "Calgary, CA" when both parts are known, otherwise whichever part the lookup returned.
 export function formatLocationName(location: Pick<LocationResult, 'city' | 'country' | 'countryCode'>): string {
   const { city, country, countryCode } = location;
   if (city && countryCode) return `${city}, ${countryCode}`;
   return city || country || 'Detected location';
+}
+
+// ISNA is a North American convention, so a country with no method of its own gets the Muslim
+// World League's, the one the app lists for Europe and the Far East. No country, no suggestion.
+export function suggestMethod(countryCode: string | undefined): CalculationMethodName | undefined {
+  if (!countryCode) return undefined;
+  return COUNTRY_TO_METHOD[countryCode] ?? 'MuslimWorldLeague';
 }
 
 function text(value: unknown): string {
