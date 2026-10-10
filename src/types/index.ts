@@ -61,6 +61,7 @@ export type CalculationMethodName =
 export type MadhabName = 'Shafi' | 'Hanafi';
 
 export type HighLatitudeRuleName =
+  | 'Automatic'
   | 'MiddleOfTheNight'
   | 'SeventhOfTheNight'
   | 'TwilightAngle';

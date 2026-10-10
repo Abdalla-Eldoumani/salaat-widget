@@ -15,7 +15,7 @@ import type {
   MadhabName,
   HighLatitudeRuleName,
 } from '../types';
-import { PRAYER_NAMES } from './constants';
+import { HIGH_LATITUDE, PRAYER_NAMES } from './constants';
 
 // Maps our string identifiers to adhan-js constructor calls.
 const METHOD_MAP: Record<CalculationMethodName, () => ReturnType<typeof CalculationMethod.MuslimWorldLeague>> = {
@@ -38,16 +38,24 @@ const MADHAB_MAP: Record<MadhabName, (typeof Madhab)[keyof typeof Madhab]> = {
   Hanafi: Madhab.Hanafi,
 };
 
-const HIGH_LAT_MAP: Record<HighLatitudeRuleName, (typeof HighLatitudeRule)[keyof typeof HighLatitudeRule]> = {
+type ChosenRule = Exclude<HighLatitudeRuleName, 'Automatic'>;
+
+const HIGH_LAT_MAP: Record<ChosenRule, (typeof HighLatitudeRule)[keyof typeof HighLatitudeRule]> = {
   MiddleOfTheNight: HighLatitudeRule.MiddleOfTheNight,
   SeventhOfTheNight: HighLatitudeRule.SeventhOfTheNight,
   TwilightAngle: HighLatitudeRule.TwilightAngle,
 };
 
-function buildParams(method: CalculationMethodName, madhab: MadhabName, highLatRule: HighLatitudeRuleName) {
+// adhan's own recommended() looks at the northern hemisphere only.
+function resolveHighLatitudeRule(rule: HighLatitudeRuleName, latitude: number): ChosenRule {
+  if (rule !== 'Automatic') return rule;
+  return Math.abs(latitude) > HIGH_LATITUDE ? 'SeventhOfTheNight' : 'MiddleOfTheNight';
+}
+
+function buildParams(latitude: number, method: CalculationMethodName, madhab: MadhabName, highLatRule: HighLatitudeRuleName) {
   const params = METHOD_MAP[method]();
   params.madhab = MADHAB_MAP[madhab];
-  params.highLatitudeRule = HIGH_LAT_MAP[highLatRule];
+  params.highLatitudeRule = HIGH_LAT_MAP[resolveHighLatitudeRule(highLatRule, latitude)];
   return params;
 }
 
@@ -57,10 +65,10 @@ export function calculateDaySchedule(
   date: Date,
   method: CalculationMethodName,
   madhab: MadhabName,
-  highLatRule: HighLatitudeRuleName = 'MiddleOfTheNight',
+  highLatRule: HighLatitudeRuleName = 'Automatic',
 ): DaySchedule {
   const coordinates = new Coordinates(latitude, longitude);
-  const params = buildParams(method, madhab, highLatRule);
+  const params = buildParams(latitude, method, madhab, highLatRule);
   const pt = new PrayerTimes(coordinates, date, params);
   const tomorrow = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1);
 

@@ -1,4 +1,4 @@
-import type { SalaatSettings, CalculationMethodName, PrayerName } from '../types';
+import type { SalaatSettings, CalculationMethodName, HighLatitudeRuleName, PrayerName } from '../types';
 
 export const DEFAULT_SETTINGS: SalaatSettings = {
   latitude: 51.0447,
@@ -8,7 +8,7 @@ export const DEFAULT_SETTINGS: SalaatSettings = {
 
   calculationMethod: 'ISNA',
   madhab: 'Shafi',
-  highLatitudeRule: 'MiddleOfTheNight',
+  highLatitudeRule: 'Automatic',
 
   notificationsEnabled: true,
   adhanEnabled: true,
@@ -25,6 +25,17 @@ export const DEFAULT_SETTINGS: SalaatSettings = {
   onboardingComplete: false,
   onboardingStep: 0,
 };
+
+// Above this latitude the twilight angles often fail or fall at an odd hour in summer, so
+// Automatic switches from the middle of the night to the seventh.
+export const HIGH_LATITUDE = 48;
+
+export const HIGH_LATITUDE_RULES: Array<{ value: HighLatitudeRuleName; label: string }> = [
+  { value: 'Automatic', label: 'Automatic' },
+  { value: 'MiddleOfTheNight', label: 'Middle of the night' },
+  { value: 'SeventhOfTheNight', label: 'Seventh of the night' },
+  { value: 'TwilightAngle', label: 'Twilight angle' },
+];
 
 // Display info for each calculation method.
 // Region helps users pick the right one during onboarding.
