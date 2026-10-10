@@ -17,7 +17,7 @@ Bundled adhan recordings, packaged into the app at build time through the resour
 
 The six files are byte-identical to the recordings listed under Sunni on the [PrayTimes.org adhan audio page](https://praytimes.org/docs/adhan), checked by MD5 against `https://praytimes.org/audio/sunni/`. Their ID3 tags name `www.PrayTimes.org` as composer and "Adhan - Sunni" as album.
 
-That page publishes the recordings without a licence, and the MIT licence PrayTimes.org gives its calculation code does not mention them. The recordings are therefore not covered by this repository's MIT licence, and their redistribution terms are not recorded. Confirm the terms with the site before distributing a build outside personal use.
+That page publishes the recordings without a licence: on 10 October 2026 it carries only the notice "© 2007–2026 PrayTimes.org". The MIT licence PrayTimes.org gives its calculation code does not mention them, and an older copy of the site's wiki pages showed a CC BY-NC 3.0 footer that has not been confirmed for the audio. The recordings are therefore not covered by this repository's MIT licence, and their redistribution terms are not recorded. Confirm the terms with the site before distributing a build outside personal use.
 
 ## File naming
 
