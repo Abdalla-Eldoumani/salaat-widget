@@ -21,7 +21,7 @@ If auto-detect is off, you pick from a list of 131 cities (see `src/lib/cities.t
 |---------|------|---------|--------------|
 | `calculationMethod` | string | `ISNA` | Which organization's angle convention to use for Fajr and Isha. |
 | `madhab` | string | `Shafi` | Affects Asr time. `Shafi` = shadow equals object height. `Hanafi` = shadow equals double object height. |
-| `highLatitudeRule` | string | `MiddleOfTheNight` | How to calculate Fajr/Isha at extreme latitudes (above ~48°) in summer when twilight never fully ends. |
+| `highLatitudeRule` | string | `Automatic` | How to calculate Fajr/Isha at high latitudes (above ~48°) in summer when twilight never fully ends. `Automatic` picks `SeventhOfTheNight` above 48° (north or south) and `MiddleOfTheNight` otherwise. |
 
 ### Available methods
 
@@ -46,11 +46,12 @@ The `adhan` library adds the small per-method adjustments that each organisation
 
 At latitudes above about 48°, twilight in summer can be so long that the angle-based Fajr and Isha fall absurdly far from the night, or do not exist. The rule sets a limit measured from sunrise and sunset, and Fajr or Isha is moved to the limit when the angle-based time is undefined or goes past it:
 
+- **Automatic** - The seventh of the night above 48° latitude, north or south, and the middle of the night at 48° and below. Where the choice matters it moves Fajr and Isha by hours: in Calgary on the June solstice, Isha is 22:59 with the seventh and 00:58 with the middle. This is the default.
 - **Middle of the night** - The limit is half the night. Fajr is never earlier than the midpoint of the night, and Isha never later.
 - **Seventh of the night** - The limit is one seventh of the night after sunset for Isha and before sunrise for Fajr.
 - **Twilight angle** - The limit is the method's twilight angle divided by 60, as a fraction of the night.
 
-Onboarding shows this setting only when your latitude is above 48°. It is always available in settings. The Moonsighting Committee method uses its own seasonal rule and ignores this setting.
+Onboarding shows this setting only when your latitude is above 48°. It is always available in settings. A rule you pick is kept at every latitude. A setup saved by 0.2.0 or earlier stores `MiddleOfTheNight` and keeps it until you choose Automatic. The Moonsighting Committee method uses its own seasonal rule and ignores this setting.
 
 Near the polar circle, some times can still be undefined for a few days. The widget shows `--:--` for those and skips them when it picks the next prayer.
 
