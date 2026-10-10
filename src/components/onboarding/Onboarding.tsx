@@ -8,7 +8,7 @@ import type {
   SalaatSettings,
   UpdateSetting,
 } from '../../types';
-import { COUNTRY_TO_METHOD } from '../../lib/constants';
+import { COUNTRY_TO_METHOD, HIGH_LATITUDE } from '../../lib/constants';
 import { CITIES } from '../../lib/cities';
 import { formatLocationName } from '../../lib/location';
 import { cityLabel } from '../ui/CityPicker';
@@ -27,7 +27,6 @@ interface OnboardingProps {
 }
 
 const STEP_COUNT = 3;
-const HIGH_LATITUDE = 48;
 
 export default function Onboarding({ settings, onUpdate, geoLocation, geoDetecting, geoError, onGeoDetect }: OnboardingProps) {
   // A step number of 3 means the last write of a finished setup was lost; show the last step.
