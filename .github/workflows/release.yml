@@ -75,6 +75,31 @@ jobs:
             **macOS** - Apple Silicon only (`Salaat.Widget_<version>_aarch64.dmg`). Open the disk image and drag the app into Applications. On first launch right-click the app and choose *Open* to get past Gatekeeper.
 
             **Linux** - Install `Salaat.Widget_<version>_amd64.deb` with `sudo dpkg -i`, or run the `.AppImage` after `chmod +x`. GNOME users need the AppIndicator extension for the tray icon.
+
+            **Checksums** - `SHA256SUMS.txt` lists the SHA-256 of every file above. Compare it with `sha256sum <file>` on Linux, `shasum -a 256 <file>` on macOS, or `Get-FileHash <file>` in PowerShell.
           releaseDraft: true
           prerelease: false
           args: --ci
+
+  # Runs once all three platforms have uploaded, so the sums cover every asset under the name
+  # people download it by.
+  checksums:
+    name: Checksums
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Add SHA-256 sums to the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          mkdir assets
+          gh release download "$TAG" --dir assets
+          # A re-run finds the file from the last run and must not hash it.
+          rm -f assets/SHA256SUMS.txt
+          (cd assets && sha256sum -- *) > SHA256SUMS.txt
+          gh release upload "$TAG" SHA256SUMS.txt --clobber
