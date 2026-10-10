@@ -6,7 +6,9 @@ import { MAX_REFRESH_MS, calculateDaySchedule, msUntilRefresh, resolvePrayerStat
 // - AlAdhan timetable (api.aladhan.com, v1 timings endpoint), fetched 2026-10-09. Method ids:
 //   ISNA 2, MWL 3, Egyptian 5, Karachi 1, Umm al-Qura 4, Kuwait 9, Qatar 10, Singapore 11,
 //   Tehran 7, Diyanet 13. Shown there in whole minutes, local time.
-// - PyEphem 4.2 for Asr: Sun position at the Asr moment, standard shadow definition, no refraction.
+// - PyEphem 4.2 for Asr, checked against astropy 8.0 (a different ephemeris, within 1 s on every
+//   row): the first moment after transit when the Sun's altitude equals atan(1 / (n + tan|lat - dec|)),
+//   with the declination taken at that moment, n = 1 (Shafi) or 2 (Hanafi), no refraction.
 
 const SECOND = 1000;
 const MINUTE = 60 * SECOND;
@@ -49,6 +51,25 @@ const METHOD_ROWS: Partial<Record<CalculationMethodName, Row['local']>> = {
   Turkey: { fajr: '05:00', sunrise: '06:07', dhuhr: '12:13', asr: '15:35', maghrib: '18:08', isha: '19:11' },
 };
 
+// Asr from PyEphem, UTC to the second. Includes places where adhan was early (Calgary, Toronto,
+// London, Oslo, Honolulu) and late (Los Angeles, Calgary in March), and Honolulu, where Asr falls on
+// the next UTC day.
+const ASR_ROWS: Array<{ place: string; lat: number; lon: number; date: string; madhab: MadhabName; asr: string }> = [
+  { place: 'Calgary', lat: 51.0447, lon: -114.0719, date: '2026-10-09', madhab: 'Shafi', asr: '2026-10-09T22:18:44Z' },
+  { place: 'Calgary', lat: 51.0447, lon: -114.0719, date: '2026-10-09', madhab: 'Hanafi', asr: '2026-10-09T23:03:29Z' },
+  { place: 'Calgary', lat: 51.0447, lon: -114.0719, date: '2026-03-20', madhab: 'Shafi', asr: '2026-03-20T23:02:07Z' },
+  { place: 'Toronto', lat: 43.6532, lon: -79.3832, date: '2026-10-09', madhab: 'Shafi', asr: '2026-10-09T20:11:49Z' },
+  { place: 'London', lat: 51.5074, lon: -0.1278, date: '2026-10-09', madhab: 'Shafi', asr: '2026-10-09T14:42:37Z' },
+  { place: 'London', lat: 51.5074, lon: -0.1278, date: '2026-12-21', madhab: 'Shafi', asr: '2026-12-21T13:37:31Z' },
+  { place: 'Los Angeles', lat: 34.0522, lon: -118.2437, date: '2026-03-20', madhab: 'Shafi', asr: '2026-03-20T23:27:38Z' },
+  { place: 'Sydney', lat: -33.8688, lon: 151.2093, date: '2026-10-09', madhab: 'Shafi', asr: '2026-10-09T05:17:29Z' },
+  { place: 'Makkah', lat: 21.4225, lon: 39.8262, date: '2026-03-20', madhab: 'Shafi', asr: '2026-03-20T12:52:53Z' },
+  { place: 'Jakarta', lat: -6.2088, lon: 106.8456, date: '2026-06-21', madhab: 'Hanafi', asr: '2026-06-21T09:08:44Z' },
+  { place: 'Honolulu', lat: 21.3069, lon: -157.8583, date: '2026-10-09', madhab: 'Shafi', asr: '2026-10-10T01:40:26Z' },
+  { place: 'Auckland', lat: -36.8485, lon: 174.7633, date: '2026-03-20', madhab: 'Shafi', asr: '2026-03-20T03:55:27Z' },
+  { place: 'Oslo', lat: 59.9139, lon: 10.7522, date: '2026-09-22', madhab: 'Shafi', asr: '2026-09-22T14:16:50Z' },
+];
+
 const MAKKAH = { lat: 21.4225, lon: 39.8262, utcOffset: 3 };
 const MAKKAH_NEXT_DAY_FAJR = '05:14'; // AlAdhan, 2026-10-10
 
@@ -75,8 +96,7 @@ describe('daily times against the AlAdhan timetable', () => {
     const schedule = calculateDaySchedule(row.lat, row.lon, localDate(row.date), 'ISNA', row.madhab);
     for (const name of NAMES) {
       const expected = instant(row.date, row.local[name], row.utcOffset);
-      const allowance = name === 'asr' ? 2 * MINUTE : MINUTE;
-      expect(Math.abs(timeOf(schedule, name) - expected), name).toBeLessThanOrEqual(allowance);
+      expect(Math.abs(timeOf(schedule, name) - expected), name).toBeLessThanOrEqual(MINUTE);
     }
   });
 
@@ -96,14 +116,15 @@ describe('daily times against the AlAdhan timetable', () => {
     expect((timeOf(hanafi, 'asr') - timeOf(shafi, 'asr')) / MINUTE).toBeLessThanOrEqual(47);
   });
 
-  // adhan evaluates the Sun's declination at 0h UT when it derives the Asr altitude, which is up
-  // to a day away from the Asr moment in the western hemisphere. In Calgary on 9 October that puts
-  // Asr 94 s before PyEphem's 16:18:44 MDT. This test documents the upstream deviation: it passes
-  // while the deviation exists and starts failing once adhan fixes it, which is the cue to delete it.
-  it.fails('Asr within one minute of the astronomical value (upstream deviation)', () => {
-    const schedule = calculateDaySchedule(51.0447, -114.0719, localDate('2026-10-09'), 'ISNA', 'Shafi');
-    const pyephem = Date.UTC(2026, 9, 9, 22, 18, 44);
-    expect(Math.abs(timeOf(schedule, 'asr') - pyephem)).toBeLessThanOrEqual(MINUTE);
+  // adhan 4.4.6 takes the Sun's declination at 0h UT when it derives the Asr altitude, which is up
+  // to a day before the Asr moment in the western hemisphere and puts Asr up to 95 s off. The
+  // patch in patches/ takes it at the Asr moment. Without it, six of these rows miss the allowance:
+  // both Calgary Shafi rows, Toronto, Los Angeles, Honolulu and Oslo. The shown time is rounded to
+  // the minute, so the allowance is 30 s of rounding plus 15 s, the largest difference left against
+  // PyEphem.
+  it.each(ASR_ROWS)('Asr in $place on $date ($madhab) matches the Sun\'s position', (row) => {
+    const schedule = calculateDaySchedule(row.lat, row.lon, localDate(row.date), 'ISNA', row.madhab);
+    expect(Math.abs(timeOf(schedule, 'asr') - Date.parse(row.asr))).toBeLessThanOrEqual(45 * SECOND);
   });
 });
 
