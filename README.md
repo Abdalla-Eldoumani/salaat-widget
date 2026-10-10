@@ -35,6 +35,8 @@ Grab the latest installer from the [Releases](../../releases) page.
 
 There is no Intel Mac build. None of the installers are code-signed. Pick the NSIS installer on Windows for the smallest download. It installs the WebView2 runtime if your system needs it. The MSI is there for managed installs.
 
+Each release also lists the SHA-256 of every installer in `SHA256SUMS.txt`. Compare it with `sha256sum <file>` on Linux, `shasum -a 256 <file>` on macOS, or `Get-FileHash <file>` in PowerShell. The sums catch a corrupted or altered download, but they come from the same release page as the installers, so they do not replace a signature.
+
 ## Building from source
 
 You need [Node.js](https://nodejs.org/) 22 or newer, [pnpm](https://pnpm.io/) 10, and [Rust](https://rustup.rs/). See [docs/getting-started.md](docs/getting-started.md) for full setup instructions.
