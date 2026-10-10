@@ -23,6 +23,8 @@ If auto-detect is off, you pick from a list of 131 cities (see `src/lib/cities.t
 | `madhab` | string | `Shafi` | Affects Asr time. `Shafi` = shadow equals object height. `Hanafi` = shadow equals double object height. |
 | `highLatitudeRule` | string | `Automatic` | How to calculate Fajr/Isha at high latitudes (above ~48°) in summer when twilight never fully ends. `Automatic` picks `SeventhOfTheNight` above 48° (north or south) and `MiddleOfTheNight` otherwise. |
 
+Onboarding suggests a method from the country of your location (`COUNTRY_TO_METHOD` in `src/lib/constants.ts`). A country without an entry there gets Muslim World League, and the United States and Canada get ISNA. The suggestion is only a starting point and the choice is yours.
+
 ### Available methods
 
 | Method | Fajr angle | Isha angle | Region |
