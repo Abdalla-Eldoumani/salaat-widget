@@ -12,6 +12,7 @@ import { MAX_REFRESH_MS, calculateDaySchedule, msUntilRefresh, resolvePrayerStat
 
 const SECOND = 1000;
 const MINUTE = 60 * SECOND;
+const DAY = 24 * 60 * MINUTE;
 
 interface Row {
   place: string;
@@ -221,6 +222,58 @@ describe('latitudes with no sunrise or sunset', () => {
   it('has no next prayer after the last valid time when tomorrow has none either', () => {
     const state = resolvePrayerState(tromso, new Date(Date.UTC(2026, 5, 21, 20, 0)));
     expect(state).toEqual({ currentPrayer: 'asr', nextPrayer: null, nextPrayerTime: null });
+  });
+});
+
+describe('high latitude rule', () => {
+  // AlAdhan with latitudeAdjustmentMethod 1 (middle) and 2 (one seventh), ISNA angles, 21 June 2026.
+  // It lists whole minutes, so the comparison allows one.
+  const CALGARY = { lat: 51.0447, lon: -114.0719, utcOffset: -6 };
+  const EDINBURGH = { lat: 55.9533, lon: -3.1883, utcOffset: 1 };
+  const middle = { calgary: { fajr: '02:18', isha: '00:58' }, edinburgh: { fajr: '01:15', isha: '01:15' } };
+  const seventh = { calgary: { fajr: '04:18', isha: '22:59' }, edinburgh: { fajr: '03:32', isha: '22:58' } };
+
+  function twilight(place: { lat: number; lon: number }, rule?: Parameters<typeof calculateDaySchedule>[5], date = '2026-06-21') {
+    const schedule = calculateDaySchedule(place.lat, place.lon, localDate(date), 'ISNA', 'Shafi', rule);
+    return { fajr: timeOf(schedule, 'fajr'), isha: timeOf(schedule, 'isha') };
+  }
+
+  function expectTwilight(place: typeof CALGARY, expected: { fajr: string; isha: string }, rule?: Parameters<typeof twilight>[1]) {
+    const got = twilight(place, rule);
+    // An Isha listed before noon is after midnight, on the next calendar day.
+    const isha = instant('2026-06-21', expected.isha, place.utcOffset) + (Number(expected.isha.slice(0, 2)) < 12 ? DAY : 0);
+    expect(Math.abs(got.fajr - instant('2026-06-21', expected.fajr, place.utcOffset))).toBeLessThanOrEqual(MINUTE);
+    expect(Math.abs(got.isha - isha)).toBeLessThanOrEqual(MINUTE);
+  }
+
+  it('uses the seventh of the night above 48 degrees when no rule was chosen', () => {
+    expectTwilight(CALGARY, seventh.calgary);
+    expectTwilight(EDINBURGH, seventh.edinburgh);
+  });
+
+  it('treats Automatic the same as leaving the rule out', () => {
+    expect(twilight(CALGARY, 'Automatic')).toEqual(twilight(CALGARY));
+  });
+
+  it('keeps an explicit choice above 48 degrees', () => {
+    expectTwilight(CALGARY, middle.calgary, 'MiddleOfTheNight');
+    expectTwilight(EDINBURGH, middle.edinburgh, 'MiddleOfTheNight');
+    expectTwilight(CALGARY, seventh.calgary, 'SeventhOfTheNight');
+  });
+
+  it('switches rule just above 48 degrees', () => {
+    const at = { lat: 48, lon: -114.0719 };
+    const above = { lat: 48.01, lon: -114.0719 };
+    // The two rules must differ here, or the equalities below would pass for any threshold.
+    expect(twilight(at, 'MiddleOfTheNight')).not.toEqual(twilight(at, 'SeventhOfTheNight'));
+    expect(twilight(at)).toEqual(twilight(at, 'MiddleOfTheNight'));
+    expect(twilight(above)).toEqual(twilight(above, 'SeventhOfTheNight'));
+  });
+
+  it('applies the same threshold south of the equator in its summer', () => {
+    const ushuaia = { lat: -54.8019, lon: -68.303 };
+    expect(twilight(ushuaia, 'MiddleOfTheNight', '2026-12-21')).not.toEqual(twilight(ushuaia, 'SeventhOfTheNight', '2026-12-21'));
+    expect(twilight(ushuaia, undefined, '2026-12-21')).toEqual(twilight(ushuaia, 'SeventhOfTheNight', '2026-12-21'));
   });
 });
 
